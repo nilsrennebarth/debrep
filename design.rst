@@ -87,18 +87,18 @@ administration commands.
 However, take a look at the python-debian package, the "official" module to
 handle debian packages, changelogs, control files ...
 
-To obtain a Deb822 object from a package, do
+To obtain a Deb822 object from a package, do::
 
   from debian.debfile import DebFile
   d = DebFile('/var/cache/apt/archives/mini-dinstall_0.6.30ubuntu1_all.deb')
   c = d.debcontrol()
 
-Now, c is a (subclass of a) dictionary.
+Now, c is a (subclass of a) dictionary. ::
 
   >>> c['depends']
   'python, python:any (<< 2.8), python:any (>= 2.7.5-5~), ...
 
-To get more structured info about e.g. depends, do
+To get more structured info about e.g. depends, do::
 
   >>> from debian.deb822 import Package
   >>> p = Packages(c)
@@ -124,15 +124,17 @@ Tables
 Packages
 ~~~~~~~~
 Hold all binary Packages, i.e. over all distributions. It will held .deb and
-.udeb Packages and all associated data. Column `control` will hold the full
-text of the debian control file. `Version` and `Architecture` are the same as
+.udeb Packages and all associated data. Column ``control`` will hold the full
+text of the debian control file. ``Version`` and ``Architecture`` are the same as
 the version field from the control field, it is present to allow searches on
-the database level.  `udeb` is 0 for normal packages, 1 for udeb
-packages. `Filename`, `Size`, and the checksums are the same as the fields of
+the database level.  ``udeb`` is 0 for normal packages, 1 for udeb
+packages. ``Filename``, ``Size``, and the checksums are the same as the fields of
 the same name in a Packages file. The SHA256 in particular is to check if a
 package with the same name, version and architecture is already present.
 
-  CREATE TABLE Packages (
+Table definition::
+
+  CREATE TABLE packages (
     id INT PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     control TEXT,
@@ -144,13 +146,14 @@ package with the same name, version and architecture is already present.
     MD5Sum TEXT,
     SHA1 TEXT,
     SHA256 TEXT,
-    Description_md5 TEXT)
+    Description_md5 TEXT
+  )
 
 Releases
 ~~~~~~~~
-Hold a Release, i.e. the meta data of a relase:
+Hold a Release, i.e. the meta data of a relase::
 
-  CREATE TABLE Releases (
+  CREATE TABLE releases (
     id INT PRIMARY KEY AUTOINCREMENT,
     Version TEXT,
     Suite TEXT,
@@ -158,19 +161,20 @@ Hold a Release, i.e. the meta data of a relase:
     Origin TEXT,
     Label TEXT,
     Components TEXT,
-    Default_Component TEXT)
+    Default_Component TEXT
+  )
 
 The information what packages belong to a release is held in separate tables
-because these are lists:
+because these are lists::
 
-  CREATE TABLE Release_pkg (
+  CREATE TABLE release_pkg (
     idrel INT,
     comp TEXT,
     idpkg INT,
     PRIMARY KEY (idrel, idpkg)
   )
 
-  CREATE TABLE Release_src (
+  CREATE TABLE release_src (
     idrel INT,
     comp TEXT,
     idsrc INT,
@@ -183,11 +187,11 @@ Schema
 ~~~~~~
 Hold database metadata. Currently only a version number that needs to be
 increased each time the table definitions are changed. In that case,
-a corresponding update script must be applied.
+a corresponding update script must be applied. Table::
 
-  CREATE TABLE Dbschema (
+  CREATE TABLE dbschema (
     version INT
-
+  )
 
 
 
@@ -203,6 +207,69 @@ For the repository
 - File storage strategy. pool, bydist
 - Create "Contents" indices.
 - Allow distributions with equal package version but different content
+
+Configuration is a yaml file structured as follows:
+
+Toplevel is a Mapping with keys
+
+  root
+    Path to repository root directory (optional)
+    If not given, the default depends on where the config file was found:
+
+      location specific
+        the current working dir itself i.e. ``.``
+      user specific
+        ``~/public_html/repo``
+      global
+        ``/var/www/repo``
+  db
+    Arguments to connect to the database. This is a mapping
+    optional if dbtype is sqlite, in this case the path to the
+    database defaults to `root`/``db/repo.db``
+  dbtype
+    One of sqlite, mysql
+  layout
+    One of pool or bydist (optional, default is pool)
+  gpgkey
+    Id of the GPG key to sign releases that don't specify
+    their own key. (optional, but then each release must specify one)
+  defrelease
+    Name of the default release to add to if none is given. (optional,
+    default is the first writeable release
+  defarchitectures
+    A sequence of architectures (i.e. strings)
+  releases
+    A sequence of releases, each a mapping
+
+A release is a mapping with keys
+
+  name
+    Codename of the release. Must be unique
+  suite
+    Suite name, i,e, an alias of the release (optional)
+  version
+    Version number (optional)
+  origin
+    Origin of the release (optional)
+  description
+    optional description
+  compnents
+    sequence of strings. First one is the default for package
+    operations
+  architectures
+    Sequence of strings. It is an error to add a binary package with an
+    architecture not mentioned. Optional if defarchitectures is given.
+
+The config file is named ``debrep.conf`` and is searched (in this order)
+
+- location specific: in subdirectory ``config`` of the current working
+  directory.
+- user specific: in ``~/.config``
+- global: in ``/etc/debrep/debrep.conf``
+
+A config file must be found, and as soon as it is found, no further search is
+done, in particular no attempt is made to merge specific with less specific
+options.
 
 Terminology
 -----------
