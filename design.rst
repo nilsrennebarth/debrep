@@ -84,34 +84,6 @@ So what we basically do is, to extend mini-dinstall to hava a databbase in
 the background and to several file store backends plus distribution
 administration commands.
 
-However, take a look at the python-debian package, the "official" module to
-handle debian packages, changelogs, control files ...
-
-To obtain a Deb822 object from a package, do::
-
-  from debian.debfile import DebFile
-  d = DebFile('/var/cache/apt/archives/mini-dinstall_0.6.30ubuntu1_all.deb')
-  c = d.debcontrol()
-
-Now, c is a (subclass of a) dictionary. ::
-
-  >>> c['depends']
-  'python, python:any (<< 2.8), python:any (>= 2.7.5-5~), ...
-
-To get more structured info about e.g. depends, do::
-
-  >>> from debian.deb822 import Package
-  >>> p = Packages(c)
-  >>> print(p.relations['depends'])
-  [[{'arch': None, 'name': 'python', 've...
-  >>> dep = p.relations['depends']
-  >>> for i,r in enumerate(dep): print(i,r[0]['version'])
-  0 None
-  1 ('<<', '2.8')
-  2 ('>=', '2.7.5-5~')
-  3 ('>=', '0.7.93')
-  4 None
-
 
 Database
 --------
