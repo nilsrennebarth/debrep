@@ -243,6 +243,33 @@ A config file must be found, and as soon as it is found, no further search is
 done, in particular no attempt is made to merge specific with less specific
 options.
 
+Operations
+----------
+Database and file storage are plugins, so we need to define the
+possible operations that need to be implemented.
+
+Database
+~~~~~~~~
+Lowlevel ops:
+- Enter new BinPackage to given release, component. Set id to
+  newly generated one.
+- Add existing Package id to release, component.
+- Replace Package in release with different content
+
+- add a BinPackage to db. Parameters: release (primary name), component. 
+  new means, a package of that name does not exist in the given release,
+  and a package with the same content is not in the repo. The id must
+  be -1 and it will be replaced by the new obtained during insert.
+- add an existing BinPackage to db. Parameters: release, component. Package
+  must have an id. A package with the same content is already present
+  but not in the given release. Amounts to just adding the given
+  (idrel, idpkg) pair to the release_pkg table
+
+- del a BinPackage from db
+
+on storage and db
+
+
 Terminology
 -----------
 

@@ -3,12 +3,17 @@
 Add a package to the repository
 '''
 
+import logging
+
 import debrep.config
 from debrep.db.sqlite import Db
+
+logging.basicConfig(level=logging.DEBUG)
 
 config = debrep.config.Config()
 
 db = Db(config)
+db.close()
 
 # class BinPackage
 #  construct from filename
