@@ -12,7 +12,7 @@ class Db:
 	version = 1
 
 	_tables = [
-		'''CREATE TABLE packages (
+		'''CREATE TABLE binpackages (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT,
 		control TEXT,
@@ -26,6 +26,15 @@ class Db:
 		SHA256 TEXT,
 		Description_md5 TEXT
 		)''',
+		'''CREATE TABLE srcpackages (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT,
+		dsc TEXT,
+		Directory TEXT,
+		Priority TEXT,
+		Section TEXT
+		)
+		''',
 		'''CREATE TABLE releases (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		Codename TEXT
@@ -75,6 +84,26 @@ class Db:
 		self.db = sqlite3.connect(**config.db)
 		self.dbc = self.db.cursor()
 		self.initdb()
+
+	def newbinary(self, pkg):
+		'''
+		Create a new entry for a binary package
+
+		This is the low-level method which just creates a new entry
+		in the binpackages table
+		'''
+		sql = '''INSERT INTO binpackages (
+			name, control, Version, Architecture, udeb, Size,
+			MD5Sum, SHA1, SHA256, Description_md5)
+		VALUES (
+			:name, :control, :Version, :Architecture, :udeb, :Size,
+			:MD5Sum, :SHA1, :SHA256, :Description_md5)
+		'''
+		self.dbc.execute(sql, pkg.__dict__);
+		pkg.id = self.dbc.lastrowid
+		logger.info("New binary package %s_%s_%s with id %d",
+					pkg.name, pkg.Version, pkg.Architecture, pkg.id)
+		self.db.commit()
 
 	def close(self):
 		self.dbc.close()
