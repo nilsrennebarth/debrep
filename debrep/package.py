@@ -14,13 +14,11 @@ from numbers import Number
 from debian.debfile import DebFile
 import hashlib
 
+
 # Testing aid
-if __name__ == '__main__':
-	import sys,os
-	sys.path.append(os.path.dirname(__file__))
-	import utils
-else:
-	from . import utils
+if __name__ == '__main__': sys.path.append(os.path.dirname(__file__))
+
+import utils
 
 class PkgError(Exception):
 	def __init__(self,msg):
