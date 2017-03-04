@@ -82,6 +82,7 @@ class Db:
 		
 	def __init__(self, config):
 		self.db = sqlite3.connect(**config.db)
+		self.db.row_factory = sqlite3.Row
 		self.dbc = self.db.cursor()
 		self.initdb()
 
@@ -99,7 +100,7 @@ class Db:
 			:name, :control, :Version, :Architecture, :udeb, :Size,
 			:MD5Sum, :SHA1, :SHA256, :Description_md5)
 		'''
-		self.dbc.execute(sql, pkg.__dict__);
+		self.dbc.execute(sql, pkg._asdict());
 		pkg.id = self.dbc.lastrowid
 		logger.info("New binary package %s_%s_%s with id %d",
 			pkg.name, pkg.Version, pkg.Architecture, pkg.id)
@@ -117,11 +118,18 @@ class Db:
 			SHA1=:SHA1, SHA256=:SHA256, Description_md5=:Description_md5
 		WHERE id=:id
 		'''
-		self.dbc.execute(sql, pkg.__dict__);
+		self.dbc.execute(sql, pkg._asdict());
 		logger.info("Replace binary package %s_%s with version %s",
 			pkg.name, pkg.Architecture, pkg.Version)
 
-
+	def getbinary(self, pkgid):
+		'''
+		Get a binary package from the database as a dictionary
+		'''
+		self.dbc.execute('SELECT * FROM binpackages WHERE id=?', (pkgid,))
+		r = self.dbc.fetchone()
+		return dict(zip(r.keys(), r))
+		
 	def close(self):
 		self.dbc.close()
 		self.db.close()

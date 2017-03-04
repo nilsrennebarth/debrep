@@ -7,14 +7,17 @@ import logging, sys
 
 import debrep.config
 from debrep.db.sqlite import Db
-from debrep.package import BinPackage
+from debrep.package import getBinFromDeb
+
+logger = logging.getLogger('main')
 
 logging.basicConfig(level=logging.DEBUG)
 
 config = debrep.config.Config()
 
 db = Db(config)
-pkg = BinPackage(sys.argv[1])
+pkg = getBinFromDeb(sys.argv[1])
+logger.debug('Got package %s', str(pkg))
 db.newbinary(pkg)
 db.close()
 

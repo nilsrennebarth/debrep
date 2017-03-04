@@ -12,13 +12,17 @@ Contains the classes
 from types import SimpleNamespace
 from numbers import Number
 from debian.debfile import DebFile
-import hashlib
+from debian.deb822 import Deb822
+import collections, hashlib
 
 
 # Testing aid
-if __name__ == '__main__': sys.path.append(os.path.dirname(__file__))
+if __name__ == '__main__':
+	import os, sys
+	sys.path.append(os.path.dirname(__file__))
 
 import utils
+from namedtuple_with_abc import namedtuple
 
 class PkgError(Exception):
 	def __init__(self,msg):
@@ -26,46 +30,97 @@ class PkgError(Exception):
 	def __str__(self):
 		return self._msg
 
-class BinPackage(SimpleNamespace):
 
-	def __init__(self, arg):
-		if isinstance(arg, Number):
-			self.fromdb(arg)
-		elif isinstance(arg, str):
-			self.frompath(arg)
-		else:
-			raise PkgError('Invalid argument type')
+class BinPackage (namedtuple.abc):
+	'''
+	Base class for binary packages
+	'''
+	_fields = [
+		'name', 'control', 'cdict', 'Version',
+		'Architecture', 'udeb', 'Filename', 'Size',
+		'MD5Sum', 'SHA1', 'SHA256', 'Description_md5'
+	]
 
 	def __str__(self):
 		keys = (
-			'name', 'Version', 'Architecture', 'Shortdesc', \
-			'Size', 'SHA256', 'Origfile' \
+			'name', 'Version', 'Architecture', 'shortdesc', \
+			'Size', 'SHA256', \
 		)
-		items = ('{}: {}'.format(k, self.__dict__[k]) for k in keys)
+		items = ('{}: {}'.format(k, getattr(self, k)) for k in keys)
 		return '\n'.join(items)
 
-	def fromdb(self, arg):
-		# not yet implemented
-		pass
 
-	def frompath(self, arg):
-		self.debfile = DebFile(arg)
-		self.cdict = self.debfile.debcontrol()
-		self.id = -1
-		self.name = self.cdict['Package']
-		self.control = self.debfile.control.get_content('control', 'utf-8')
-		self.Version = self.cdict['Version']
-		self.Architecture = self.cdict['Architecture']
-		# let us keep this simple for now
-		self.udeb = arg.endswith('.udeb')
-		(self.Size, self.MD5Sum, self.SHA1, self.SHA256) = \
-			utils.get_hashes(arg)
-		self.Description_md5 = hashlib.md5( \
-			self.cdict['Description'].encode() + b'\n' \
-		).hexdigest()
-		self.Origfile = arg
-		self.Shortdesc = (self.cdict['Description'].partition('\n'))[0]
+	@property
+	def shortdesc(self):
+		return (self.cdict['Description'].partition('\n'))[0]
+
+class BinPackageDeb(BinPackage):
+	'''
+	A binary package derived from a .deb file
+	'''
+
+	_fields = BinPackage._fields + ('debfile', 'origfile')
+
+	def __str__(self):
+		return super().__str__() + '\norigfile: ' + self.origfile
+
+
+def getBinFromDeb(fname):
+	'''
+	Get a binary package from a .deb file
+	'''
+	dfile = DebFile(fname)
+	cdict = dfile.debcontrol()
+	csums = utils.get_hashes(fname)
+	return BinPackageDeb(
+		# General BinPackage properties
+		name = cdict['Package'],
+		control = dfile.control.get_content('control', 'utf-8'),
+		cdict = dfile.debcontrol(),
+		Version = cdict['Version'],
+		Architecture = cdict['Architecture'],
+		udeb = fname.endswith('.udeb'),
+		Filename = '',
+		Size = csums.size,
+		MD5Sum = csums.md5,
+		SHA1 = csums.sha1,
+		SHA256 = csums.sha256,
+		Description_md5 = hashlib.md5(
+			cdict['Description'].encode() + b'\n').hexdigest(),
+		# Special Deb properties
+		debfile = dfile,
+		origfile = fname
+	)
+
+class BinPackageDb(BinPackage):
+	'''
+	A binary package obtained from a database
+	'''
+
+	_fields = BinPackage._fields + ('id', )
+
+	def __str__(self):
+		return super().__str__() + '\nid: ' + str(self.id)
+
+def getBinFromDb(db, pckid):
+	'''
+	Get a binary package from a database
+	'''
+	pdict = db.getbinary(pckid)
+	pdict['cdict'] = Deb822(pdict['control'])
+	return BinPackageDb(**pdict)
 
 if __name__ == '__main__':
-	print(BinPackage(sys.argv[1]))
-
+	fname = sys.argv[1]
+	try:
+		id = int(fname)
+		fname = None
+	except ValueError:
+		pass
+	if (fname != None):
+		print(getBinFromDeb(arg))
+	else:
+		import config
+		from db.sqlite import Db
+		db = Db(config.Config())
+		print(getBinFromDb(db, id))
