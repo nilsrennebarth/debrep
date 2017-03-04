@@ -89,8 +89,8 @@ class Db:
 		'''
 		Create a new entry for a binary package
 
-		This is the low-level method which just creates a new entry
-		in the binpackages table
+		This is the low-level method that justs creates an
+		entry, without performing any checks.
 		'''
 		sql = '''INSERT INTO binpackages (
 			name, control, Version, Architecture, udeb, Size,
@@ -102,8 +102,25 @@ class Db:
 		self.dbc.execute(sql, pkg.__dict__);
 		pkg.id = self.dbc.lastrowid
 		logger.info("New binary package %s_%s_%s with id %d",
-					pkg.name, pkg.Version, pkg.Architecture, pkg.id)
+			pkg.name, pkg.Version, pkg.Architecture, pkg.id)
 		self.db.commit()
+
+	def replacebinary(self, pkg):
+		'''
+		Replace entry for a binary package with new data
+
+		This again is just the low-level method without checks
+		'''
+		sql = '''UPDATE binpackages
+		SET name=:name, control=:control, Version=:Version,
+			Architecture=:Architecture, Size=:Size, MD5Sum=:MD5Sum,
+			SHA1=:SHA1, SHA256=:SHA256, Description_md5=:Description_md5
+		WHERE id=:id
+		'''
+		self.dbc.execute(sql, pkg.__dict__);
+		logger.info("Replace binary package %s_%s with version %s",
+			pkg.name, pkg.Architecture, pkg.Version)
+
 
 	def close(self):
 		self.dbc.close()
