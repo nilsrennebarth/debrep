@@ -106,7 +106,7 @@ package with the same name, version and architecture is already present.
 
 Table definition::
 
-  CREATE TABLE packages (
+  CREATE TABLE binpackages (
     id INT PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     control TEXT,
