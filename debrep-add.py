@@ -5,20 +5,36 @@ Add a package to the repository
 
 import logging, sys
 
-import debrep.config
-from debrep.db.sqlite import Db
-from debrep.package import getBinFromDeb
+from debrep import config, package
+from debrep.store import pool
 
+def addBinary(path, db, store):
+	global config
+	pkg = package.getBinFromDeb(path)
+	logger.debug('Got package %s', str(pkg))
+	release = config.defrelease
+	rid = db.relId(release)
+	if rid < 1:
+		logger.error("Unknown release '%s'", config.defrelease)
+		return
+	(target, other) = db.getrefsAdd(pkg, rid)
+	if target == None:
+		db.newbinary(pkg)
+		db.addbinref(pkg.id, rid)
+	else:
+		logger.info("Package %s already present", pkg.name)
+
+
+#
+# -------- main -------
+#
 logger = logging.getLogger('main')
-
 logging.basicConfig(level=logging.DEBUG)
 
-config = debrep.config.Config()
-
-db = Db(config)
-pkg = getBinFromDeb(sys.argv[1])
-logger.debug('Got package %s', str(pkg))
-db.newbinary(pkg)
+config = config.Config()
+db = config.getDb()
+store = config.getStore()
+addBinary(sys.argv[1], db, store)
 db.close()
 
 # class BinPackage

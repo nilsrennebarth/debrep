@@ -231,7 +231,7 @@ A release is a mapping with keys
     Origin of the release (optional)
   description
     optional description
-  compnents
+  components
     sequence of strings. First one is the default for package
     operations
   architectures
@@ -261,6 +261,7 @@ Lowlevel ops:
   newly generated one.
 - Add existing Package id to release, component.
 - Replace Package in release with different content
+- Retrieve Package by id
 
 - add a BinPackage to db. Parameters: release (primary name), component. 
   new means, a package of that name does not exist in the given release,
@@ -274,6 +275,24 @@ Lowlevel ops:
 - del a BinPackage from db
 
 on storage and db
+
+Store
+~~~~~
+Filename encodes package,version,arch When using pools, all three determine
+the content and packages whose version didn't change are shared across
+releases.
+
+For other storage strategies, we can lift the restriction that the same
+version implies the same content and store a file under a release
+specific path. Sharing files with the same content accross releases
+can be done by using symlinks or hardlinks, but sharing can be switched
+off as well.
+
+Lowlevel ops:
+- Add new file to store
+- Add a new reference to an existing file
+- Remove a reference to a file
+- Remove the last reference to a file
 
 
 Terminology

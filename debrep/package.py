@@ -108,6 +108,10 @@ def getBinFromDb(db, pckid):
 	pdict['cdict'] = Deb822(pdict['control'])
 	return BinPackageDb(**pdict)
 
+class BinPkgRef(namedtuple.abc):
+
+	_fields = ['id', 'name', 'Architecture', 'Version', 'SHA256']
+
 
 
 if __name__ == '__main__':

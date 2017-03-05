@@ -1,4 +1,4 @@
-import collections, os, yaml
+import collections, importlib, os, yaml
 
 class ConfigError(Exception):
 	def __init__(self,msg):
@@ -6,15 +6,16 @@ class ConfigError(Exception):
 	def __str__(self):
 		return self._msg
 
-_top_options = [
-	'db',
-	'dbtype',
-	'defarchitectures',
-	'defrelease',
-	'gpgkey',
-	'layout',
-	'root'
-]
+_top_options = {
+	'db': None,
+	'dbtype': 'sqlite',
+	'defarchitectures': ['i386', 'amd64'],
+	'defrelease': ['testing'],
+	'gpgkey': None,
+	'store': 'pool',
+	'root': None,
+	'releases': None
+}
 
 class Config:
 	"""
@@ -37,19 +38,12 @@ class Config:
 				return True
 
 		def general_defaults(cfg):
-			if 'dbtype' not in cfg: cfg['dbtype'] = 'sqlite'
-			if 'db' not in cfg and cfg['dbtype'] == 'sqlite':
+			for k, v in _top_options.items():
+				if k not in cfg: cfg[k] = v
+			if cfg['dbtype'] == 'sqlite' and cfg['db'] == None:
 				cfg['db'] = {
 					'database':	os.path.join(cfg['root'], 'db', 'repo.db')
 				}
-			if 'defarchitectures' not in cfg:
-				cfg['defarchitectures'] = [ 'amd64' ];
-			if 'defrelease' not in cfg:
-				cfg['defrelease'] = '?'
-			if 'gpgkey' not in cfg:
-				cfg['gpgkey'] = '?'
-			if 'layout' not in cfg:
-				cfg['layout'] = 'pool'
 
 		def local_defaults(cfg):
 			if 'root' not in cfg:
@@ -74,7 +68,18 @@ class Config:
 			raise ConfigError('No configuration found')
 		setdefs(config_dict)
 		general_defaults(config_dict)
-		for name in _top_options:
+		for name in _top_options.keys():
 			setattr(self, name, config_dict[name])
 
-				
+	def getDb(self):
+		if self.dbtype not in ('sqlite'):
+			raise ConfigError("Unknown dbtype '{}'".format(self.dbtype))
+		db = importlib.import_module('db.' + self.dbtype)
+		return db.Db(self)
+
+	def getStore(self):
+		if self.store not in ('pool'):
+			raise ConfigError("Unknown store '{}'".format(self.store))
+		store = importlib.import_module('store.' + self.store)
+		return store.Store(self)
+

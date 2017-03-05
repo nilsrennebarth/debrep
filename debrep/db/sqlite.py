@@ -7,6 +7,12 @@ import logging, sqlite3
 
 logger = logging.getLogger(__name__)
 
+class DbError(Exception):
+	def __init__(self,msg):
+		self._msg = msg
+	def __str__(self):
+		return self._msg
+
 class Db:
 
 	version = 1
@@ -26,6 +32,8 @@ class Db:
 		SHA256 TEXT,
 		Description_md5 TEXT
 		)''',
+		'''CREATE INDEX bpname ON binpackages (name, Architecture)
+		''',
 		'''CREATE TABLE srcpackages (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT,
@@ -39,12 +47,15 @@ class Db:
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		Codename TEXT
 		)''',
-		'''CREATE TABLE release_pkg (
+		'''CREATE UNIQUE INDEX relcodename ON releases (Codename)''',
+		'''CREATE TABLE release_bin (
 		idrel INTEGER,
 		comp TEXT,
 		idpkg INTEGER,
 		PRIMARY KEY (idrel, idpkg)
 		)''',
+		'''CREATE INDEX rbpr ON release_bin (idpkg, idrel)
+		''',
 		'''CREATE TABLE release_src (
 		idrel INTEGER,
 		comp TEXT,
@@ -63,6 +74,26 @@ class Db:
 		self.dbc.execute('INSERT INTO dbschema VALUES (:v)', dict(v=Db.version))
 		self.db.commit()
 
+	def relId(self, name):
+		self.dbc.execute('SELECT id FROM releases WHERE Codename=?', (name,))
+		r = self.dbc.fetchone()
+		return -1 if r == None else r[0]
+
+	def mkreleases(self, releases):
+		'''
+		Create releases enumerated in the config
+
+		If a release with the given name does not exist it will be
+		created now. We don't delete any that we don't find in the
+		config.
+		'''
+		for release in releases:
+			if self.relId(release['name']) < 1:
+				self.dbc.execute(
+					'''INSERT INTO releases (Codename) VALUES (?)''',
+					(release['name'],)
+				)
+
 	def initdb(self):
 		'''
 		Make database ready for queries. If none of our tables
@@ -79,12 +110,14 @@ class Db:
 		self.dbc.execute("SELECT version FROM dbschema")
 		dbv = self.dbc.fetchone()[0]
 		logger.debug('Opened db version %d', dbv)
-		
+
 	def __init__(self, config):
 		self.db = sqlite3.connect(**config.db)
 		self.db.row_factory = sqlite3.Row
 		self.dbc = self.db.cursor()
 		self.initdb()
+		logger.debug('Configured releases: %s', str(config.releases))
+		self.mkreleases(config.releases)
 
 	def newbinary(self, pkg):
 		'''
@@ -104,7 +137,6 @@ class Db:
 		pkg.id = self.dbc.lastrowid
 		logger.info("New binary package %s_%s_%s with id %d",
 			pkg.name, pkg.Version, pkg.Architecture, pkg.id)
-		self.db.commit()
 
 	def replacebinary(self, pkg):
 		'''
@@ -129,8 +161,63 @@ class Db:
 		self.dbc.execute('SELECT * FROM binpackages WHERE id=?', (pkgid,))
 		r = self.dbc.fetchone()
 		return dict(zip(r.keys(), r))
-		
+
+	def relName(self, id):
+		'''
+		Codename of a release given as id
+		'''
+		c = self.db.cursor()
+		c.execute('SELECT Codename FROM releases WHERE id=?', (id,))
+		return (c.fetchone())[0]
+
+	def getrefsAdd(self, pkg, tid):
+		'''
+		Get all references needed when adding a package.
+
+		Those references are:
+		- Packages with the same name, arch and version in
+		  releases other than the target release
+		- Packages with the same name and arch in the target
+		  relese
+		'''
+		self.dbc.execute(
+			'''SELECT id, r.idrel, name, Version, Architecture, SHA256
+			FROM binpackages p
+			JOIN release_bin r ON p.id = r.idpkg
+			WHERE p.name=:name AND p.Architecture=:arch
+			AND (r.idrel=:tid OR p.Version=:version)
+			''', dict(name=pkg.name, arch=pkg.Architecture,
+				tid=tid, version=pkg.Version))
+		targetref = None
+		otherrefs = {}
+		for row in self.dbc.fetchall():
+			rowdict = dict(zip(row.keys(), row))
+			if row['idrel'] == tid:
+				# Found in target release
+				if targetref == None:
+					targetref = rowdict
+				else:
+					raise DbError("Release %s contains several versions "
+						"of %s_%s", self.relName(tid), pkg.name,
+						pkg.Architecture)
+			else:
+				# Found in other release
+				rid = row['idrel']
+				if rid not in otherrefs:
+					otherrefs[rid] = rowdict
+				else:
+					raise DbError("Release %s contains several versions "
+						"of %s_%s", self.relName(rid), pkg.name,
+						pkg.Architecture)
+		return (targetref, otherrefs)
+
+	def addbinref(self, id, relid):
+		self.dbc.execute(
+			'INSERT OR IGNORE INTO release_bin (idrel, idpkg) VALUES (?, ?)',
+			(relid, id))
+
 	def close(self):
 		self.dbc.close()
+		self.db.commit()
 		self.db.close()
 
