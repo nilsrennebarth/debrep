@@ -84,6 +84,12 @@ So what we basically do is, to extend mini-dinstall to hava a databbase in
 the background and to several file store backends plus distribution
 administration commands.
 
+TODO
+----
+- Load Db according to configuration
+- add a -c --config option to take the configuration from
+- use a general argument parser and a (sub-) command specific one
+
 
 Database
 --------

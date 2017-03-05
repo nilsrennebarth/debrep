@@ -5,15 +5,15 @@ debrep Package classes
 Contains the classes
 
  - BinPackage represent a binary package
+   - BinPackageDeb package from .deb file
+   - BinPackageDb package from database
  - SrcPackage represent a source package
 
 """
 
-from types import SimpleNamespace
-from numbers import Number
 from debian.debfile import DebFile
 from debian.deb822 import Deb822
-import collections, hashlib
+import hashlib
 
 
 # Testing aid
@@ -36,23 +36,23 @@ class BinPackage (namedtuple.abc):
 	Base class for binary packages
 	'''
 	_fields = [
-		'name', 'control', 'cdict', 'Version',
-		'Architecture', 'udeb', 'Filename', 'Size',
-		'MD5Sum', 'SHA1', 'SHA256', 'Description_md5'
+		'name', 'control', 'cdict', 'Version', 'Architecture', 'udeb',
+		'Size',	'MD5Sum', 'SHA1', 'SHA256', 'Description_md5'
 	]
 
 	def __str__(self):
 		keys = (
-			'name', 'Version', 'Architecture', 'shortdesc', \
-			'Size', 'SHA256', \
+			'name', 'Version', 'Architecture', 'shortdesc',
+			'Size', 'SHA256',
 		)
 		items = ('{}: {}'.format(k, getattr(self, k)) for k in keys)
 		return '\n'.join(items)
 
-
 	@property
 	def shortdesc(self):
 		return (self.cdict['Description'].partition('\n'))[0]
+
+
 
 class BinPackageDeb(BinPackage):
 	'''
@@ -64,7 +64,6 @@ class BinPackageDeb(BinPackage):
 	def __str__(self):
 		return super().__str__() + '\norigfile: ' + self.origfile
 
-
 def getBinFromDeb(fname):
 	'''
 	Get a binary package from a .deb file
@@ -73,31 +72,30 @@ def getBinFromDeb(fname):
 	cdict = dfile.debcontrol()
 	csums = utils.get_hashes(fname)
 	return BinPackageDeb(
-		# General BinPackage properties
 		name = cdict['Package'],
 		control = dfile.control.get_content('control', 'utf-8'),
 		cdict = dfile.debcontrol(),
 		Version = cdict['Version'],
 		Architecture = cdict['Architecture'],
 		udeb = fname.endswith('.udeb'),
-		Filename = '',
 		Size = csums.size,
 		MD5Sum = csums.md5,
 		SHA1 = csums.sha1,
 		SHA256 = csums.sha256,
 		Description_md5 = hashlib.md5(
 			cdict['Description'].encode() + b'\n').hexdigest(),
-		# Special Deb properties
 		debfile = dfile,
 		origfile = fname
 	)
+
+
 
 class BinPackageDb(BinPackage):
 	'''
 	A binary package obtained from a database
 	'''
 
-	_fields = BinPackage._fields + ('id', )
+	_fields = BinPackage._fields + ('id', 'Filename')
 
 	def __str__(self):
 		return super().__str__() + '\nid: ' + str(self.id)
@@ -110,6 +108,8 @@ def getBinFromDb(db, pckid):
 	pdict['cdict'] = Deb822(pdict['control'])
 	return BinPackageDb(**pdict)
 
+
+
 if __name__ == '__main__':
 	fname = sys.argv[1]
 	try:
@@ -118,7 +118,7 @@ if __name__ == '__main__':
 	except ValueError:
 		pass
 	if (fname != None):
-		print(getBinFromDeb(arg))
+		print(getBinFromDeb(fname))
 	else:
 		import config
 		from db.sqlite import Db
