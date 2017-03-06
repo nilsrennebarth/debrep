@@ -144,13 +144,7 @@ Hold a Release, i.e. the meta data of a relase::
 
   CREATE TABLE releases (
     id INT PRIMARY KEY AUTOINCREMENT,
-    Version TEXT,
-    Suite TEXT,
     Codename TEXT,
-    Origin TEXT,
-    Label TEXT,
-    Components TEXT,
-    Default_Component TEXT
   )
 
 The information what packages belong to a release is held in separate tables
@@ -158,14 +152,14 @@ because these are lists::
 
   CREATE TABLE release_pkg (
     idrel INT,
-    comp TEXT,
+    component TEXT,
     idpkg INT,
     PRIMARY KEY (idrel, idpkg)
   )
 
   CREATE TABLE release_src (
     idrel INT,
-    comp TEXT,
+    component TEXT,
     idsrc INT,
     PRIMARY KEY (idrel, idsrc)
   )

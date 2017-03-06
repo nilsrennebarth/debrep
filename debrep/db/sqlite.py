@@ -52,7 +52,7 @@ class Db:
 		'''CREATE UNIQUE INDEX relcodename ON releases (Codename)''',
 		'''CREATE TABLE release_bin (
 		idrel INTEGER,
-		comp TEXT,
+		component TEXT,
 		idpkg INTEGER,
 		PRIMARY KEY (idrel, idpkg)
 		)''',
@@ -60,7 +60,7 @@ class Db:
 		''',
 		'''CREATE TABLE release_src (
 		idrel INTEGER,
-		comp TEXT,
+		component TEXT,
 		idsrc INTEGER,
 		PRIMARY KEY (idrel, idsrc)
 		)''',
@@ -185,7 +185,8 @@ class Db:
 		target release if found there at all
 		'''
 		self.dbc.execute(
-			'''SELECT id, r.idrel, name, Version, Architecture, Filename, SHA256
+			'''SELECT id, r.idrel, r.component, name, Version, Architecture,
+				Filename, SHA256
 			FROM binpackages p
 			JOIN release_bin r ON p.id = r.idpkg
 			WHERE p.name=:name AND p.Architecture=:arch
@@ -209,10 +210,10 @@ class Db:
 				result.append(ref)
 		return result
 
-	def addBinaryRef(self, id, idrel):
+	def addBinaryRef(self, id, component, idrel):
 		self.dbc.execute(
-			'INSERT OR IGNORE INTO release_bin (idrel, idpkg) VALUES (?, ?)',
-			(idrel, id))
+			'''INSERT OR IGNORE INTO release_bin (idrel, component, idpkg)
+			VALUES (?, ?, ?)''', (idrel, component, id))
 
 	def delBinaryRef(self, id, idrel):
 		self.dbc.execute(

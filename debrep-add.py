@@ -8,7 +8,7 @@ import logging, sys
 from debrep import config, package
 from debrep.store import pool
 
-def addBinary(path, db, store, release, component):
+def addBinary(path, db, store, component, release):
 
 	def searchContent(refs, checksum):
 		for ref in refs:
@@ -21,6 +21,7 @@ def addBinary(path, db, store, release, component):
 	if rid < 1:
 		logger.error("Unknown release '%s'", config.defrelease)
 		return
+	# TODO check if component is part of release
 	refs = db.getrefsAdd(pkg, rid)
 	id = searchContent(refs, pkg.SHA256)
 	if id != -1:
@@ -33,8 +34,8 @@ def addBinary(path, db, store, release, component):
 			return
 		logger.info("Package '%s' with given content already in repo. Reusing",
 			pkg.name)
-		store.addBinaryRef(pkg)
-		db.addBinaryRef(refs[0].id, rid)
+		store.addBinaryRef(pkg, component, release)
+		db.addBinaryRef(refs[0].id, component, rid)
 		return
 	# The given content is not present in the repo.
 	# Can we add it at all? TODO: check if strict and if same version
@@ -62,16 +63,16 @@ def addBinary(path, db, store, release, component):
 			pkg.id = refs[0].id
 	# Now do an add or replace, depending on pkg.id
 	if pkg.id == -1:
-		store.addBinary(pkg)
+		store.addBinary(pkg, component, release)
 		db.newBinary(pkg)
-		db.addBinaryRef(pkg.id, rid)
-		logger.info("Added package %s_%s to %s with new id %d",
-			pkg.name, pkg.Version, release, pkg.id)
+		db.addBinaryRef(pkg.id, component, rid)
+		logger.info("Added package %s_%s to %s/%s with new id %d",
+			pkg.name, pkg.Version, release, component, pkg.id)
 	else:
-		store.addBinary(pkg)
+		store.addBinary(pkg, component, release)
 		db.replaceBinary(pkg)
-		logger.info("Added package %s_%s to %s under id %d",
-			pkg.name, pkg.Version, release, pkg.id)
+		logger.info("Added package %s_%s to %s/%s under id %d",
+				pkg.name, pkg.Version, release, component, pkg.id)
 
 
 
@@ -84,6 +85,6 @@ logging.basicConfig(level=logging.DEBUG)
 config = config.Config()
 db = config.getDb()
 store = config.getStore()
-addBinary(sys.argv[1], db, store, config.defrelease, '')
+addBinary(sys.argv[1], db, store, 'main', config.defrelease)
 db.close()
 
