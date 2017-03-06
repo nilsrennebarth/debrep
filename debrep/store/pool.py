@@ -2,13 +2,12 @@
 '''
 Package pool implementation of a repo file store
 '''
-import os, shutil
-from pathlib import PurePath
+import os, os.path, shutil
 
 def pure_version(v):
 	'''Version without the epoch'''
 	(epoch, sep, version) = v.partition(':')
-	return v if sep == None else version
+	return v if sep == '' else version
 
 class Store:
 
@@ -16,20 +15,29 @@ class Store:
 		self.root = config.root
 
 	def pkgName(self, pkg):
-		return ''.join(pkg.name, '_', pure_version(pkg.version), '_',
-					   pkg.Architecture, '.deb')
+		return pkg.name + '_' + pure_version(pkg.Version) + '_' \
+		   + pkg.Architecture + '.deb'
 
 	def pkgDir(self, pkg):
 		base = pkg.name
 		if 'Source' in pkg.cdict: base = pkg.cdict['Source']
 		if base.startswith('lib'):
-			return PurePath('pool', 'lib' + base[3], base)
+			return os.path.join('pool', 'lib' + base[3], base)
 		else:
-			return PurePath('pool', base[0], base)
+			return os.path.join('pool', base[0], base)
 
 	def addBinary(self, pkg):
-		shutil.copy(pkg.origfile, PurePath(self.root, self.pkgDir(pkg)),
-			self.pkgName(pkg))
+		'''
+		Add a new binary package to the store
+		'''
+		reldir  = self.pkgDir(pkg)
+		relname = os.path.join(reldir, self.pkgName(pkg))
+		# create directory
+		os.makedirs(os.path.join(self.root, reldir), exist_ok=True)
+		# copy file
+		shutil.copy(pkg.origfile, os.path.join(self.root, relname))
+		# write repository relative Filename to package
+		pkg.Filename = relname
 
 	def addBinaryRef(self, pkg):
 		pass
@@ -38,5 +46,5 @@ class Store:
 		pass
 
 	def delBinaryLastref(self, pkg):
-		os.remove(PurePath(self.root, pkg.Filename))
+		os.remove(os.path.join(self.root, pkg.Filename))
 

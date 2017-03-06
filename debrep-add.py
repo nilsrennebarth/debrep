@@ -19,6 +19,7 @@ def addBinary(path, db, store):
 		return
 	(target, other) = db.getrefsAdd(pkg, rid)
 	if target == None:
+		store.addBinary(pkg)
 		db.newbinary(pkg)
 		db.addbinref(pkg.id, rid)
 	else:

@@ -10,10 +10,10 @@ Contains the classes
  - SrcPackage represent a source package
 
 """
+import hashlib, types
 
 from debian.debfile import DebFile
 from debian.deb822 import Deb822
-import hashlib
 
 
 # Testing aid
@@ -22,7 +22,6 @@ if __name__ == '__main__':
 	sys.path.append(os.path.dirname(__file__))
 
 import utils
-from namedtuple_with_abc import namedtuple
 
 class PkgError(Exception):
 	def __init__(self,msg):
@@ -31,15 +30,10 @@ class PkgError(Exception):
 		return self._msg
 
 
-class BinPackage (namedtuple.abc):
+class BinPackage (types.SimpleNamespace):
 	'''
 	Base class for binary packages
 	'''
-	_fields = [
-		'name', 'control', 'cdict', 'Version', 'Architecture', 'udeb',
-		'Size',	'MD5Sum', 'SHA1', 'SHA256', 'Description_md5'
-	]
-
 	def __str__(self):
 		keys = (
 			'name', 'Version', 'Architecture', 'shortdesc',
@@ -58,9 +52,6 @@ class BinPackageDeb(BinPackage):
 	'''
 	A binary package derived from a .deb file
 	'''
-
-	_fields = BinPackage._fields + ('debfile', 'origfile')
-
 	def __str__(self):
 		return super().__str__() + '\norigfile: ' + self.origfile
 
@@ -94,11 +85,9 @@ class BinPackageDb(BinPackage):
 	'''
 	A binary package obtained from a database
 	'''
-
-	_fields = BinPackage._fields + ('id', 'Filename')
-
 	def __str__(self):
-		return super().__str__() + '\nid: ' + str(self.id)
+		return super().__str__() + '\nid: ' + str(self.id) \
+			+ '\nFilename: ' + self.Filename
 
 def getBinFromDb(db, pckid):
 	'''
@@ -108,9 +97,8 @@ def getBinFromDb(db, pckid):
 	pdict['cdict'] = Deb822(pdict['control'])
 	return BinPackageDb(**pdict)
 
-class BinPkgRef(namedtuple.abc):
-
-	_fields = ['id', 'name', 'Architecture', 'Version', 'SHA256']
+class BinPkgRef(types.SimpleNamespace):
+	pass
 
 
 
