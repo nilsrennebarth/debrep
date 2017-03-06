@@ -63,6 +63,7 @@ def getBinFromDeb(fname):
 	cdict = dfile.debcontrol()
 	csums = utils.get_hashes(fname)
 	return BinPackageDeb(
+		id = -1,
 		name = cdict['Package'],
 		control = dfile.control.get_content('control', 'utf-8'),
 		cdict = dfile.debcontrol(),

@@ -5,6 +5,8 @@ Debrep module implementing sqlite3 as db backend
 
 import logging, sqlite3
 
+from package import BinPkgRef
+
 logger = logging.getLogger(__name__)
 
 class DbError(Exception):
@@ -118,7 +120,7 @@ class Db:
 		self.initdb()
 		self.mkreleases(config.releases)
 
-	def newbinary(self, pkg):
+	def newBinary(self, pkg):
 		'''
 		Create a new entry for a binary package
 
@@ -137,14 +139,14 @@ class Db:
 		logger.info("New binary package %s_%s_%s with id %d",
 			pkg.name, pkg.Version, pkg.Architecture, pkg.id)
 
-	def replacebinary(self, pkg):
+	def replaceBinary(self, pkg):
 		'''
 		Replace entry for a binary package with new data
 
 		This again is just the low-level method without checks
 		'''
 		sql = '''UPDATE binpackages
-		SET name=:name, control=:control, Version=:Version, Filename=:Filename
+		SET name=:name, control=:control, Version=:Version, Filename=:Filename,
 			Architecture=:Architecture, Size=:Size, MD5Sum=:MD5Sum,
 			SHA1=:SHA1, SHA256=:SHA256, Description_md5=:Description_md5
 		WHERE id=:id
@@ -153,7 +155,7 @@ class Db:
 		logger.info("Replace binary package %s_%s with version %s",
 			pkg.name, pkg.Architecture, pkg.Version)
 
-	def getbinary(self, pkgid):
+	def getBinary(self, pkgid):
 		'''
 		Get a binary package from the database as a dictionary
 		'''
@@ -174,46 +176,48 @@ class Db:
 		Get all references needed when adding a package.
 
 		Those references are:
+		- a Package with the same name and arch in the target
+		  relese
 		- Packages with the same name, arch and version in
 		  releases other than the target release
-		- Packages with the same name and arch in the target
-		  relese
+
+		Returns a list of all references, starting with the one in the
+		target release if found there at all
 		'''
 		self.dbc.execute(
-			'''SELECT id, r.idrel, name, Version, Architecture, SHA256
+			'''SELECT id, r.idrel, name, Version, Architecture, Filename, SHA256
 			FROM binpackages p
 			JOIN release_bin r ON p.id = r.idpkg
 			WHERE p.name=:name AND p.Architecture=:arch
 			AND (r.idrel=:tid OR p.Version=:version)
 			''', dict(name=pkg.name, arch=pkg.Architecture,
 				tid=tid, version=pkg.Version))
-		targetref = None
-		otherrefs = {}
+		result = []
+		rels = set()
 		for row in self.dbc.fetchall():
-			rowdict = dict(zip(row.keys(), row))
-			if row['idrel'] == tid:
+			ref = BinPkgRef(**dict(zip(row.keys(), row)))
+			if ref.idrel in rels:
+				# must not happen
+				raise DbError("Release %s contains several versions "
+					"of %s_%s", self.relName(ref.idrel), pkg.name,
+					pkg.Architecture)
+			if ref.idrel == tid:
 				# Found in target release
-				if targetref == None:
-					targetref = rowdict
-				else:
-					raise DbError("Release %s contains several versions "
-						"of %s_%s", self.relName(tid), pkg.name,
-						pkg.Architecture)
+				result.insert(0, ref)
 			else:
 				# Found in other release
-				rid = row['idrel']
-				if rid not in otherrefs:
-					otherrefs[rid] = rowdict
-				else:
-					raise DbError("Release %s contains several versions "
-						"of %s_%s", self.relName(rid), pkg.name,
-						pkg.Architecture)
-		return (targetref, otherrefs)
+				result.append(ref)
+		return result
 
-	def addbinref(self, id, relid):
+	def addBinaryRef(self, id, idrel):
 		self.dbc.execute(
 			'INSERT OR IGNORE INTO release_bin (idrel, idpkg) VALUES (?, ?)',
-			(relid, id))
+			(idrel, id))
+
+	def delBinaryRef(self, id, idrel):
+		self.dbc.execute(
+			'DELETE FROM release_bin WHERE idrel=? AND idpkg=?',
+			(idrel, id))
 
 	def close(self):
 		self.dbc.close()

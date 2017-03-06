@@ -86,9 +86,20 @@ administration commands.
 
 TODO
 ----
-- Load Db according to configuration
-- add a -c --config option to take the configuration from
-- use a general argument parser and a (sub-) command specific one
+- write and update indices
+- commandline args parsing
+  - add a -c --config option to take the configuration from
+  - use a general argument parser and a (sub-) command specific one
+- listings
+- support release components
+- check architecture
+- delete packages
+- copy release
+- Move between components
+- source Packages
+- release/component store
+- mysql database
+
 
 
 Database

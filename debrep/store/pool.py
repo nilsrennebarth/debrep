@@ -45,6 +45,6 @@ class Store:
 	def delBinaryRef(self, pkg):
 		pass
 
-	def delBinaryLastref(self, pkg):
+	def delBinaryLastRef(self, pkg):
 		os.remove(os.path.join(self.root, pkg.Filename))
 
