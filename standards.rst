@@ -67,4 +67,12 @@ To get more structured info about e.g. depends, do::
   3 ('>=', '0.7.93')
   4 None
 
+gpg invocations to sign release files::
+
+  echo "$PASSPHRASE" \
+    | gpg --no-tty --batch --passphrase-fd=0 --default-key "$KEYID" \
+      --detach-sign -o Release.gpg.tmp "$1"
+   echo "$PASSPHRASE" \
+     | gpg --no-tty --batch --passphrase-fd=0 --default-key "$KEYID" \
+       --clearsign -o InRelease.tmp "$1"
 

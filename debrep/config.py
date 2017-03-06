@@ -9,7 +9,7 @@ class ConfigError(Exception):
 _top_options = {
 	'db': None,
 	'dbtype': 'sqlite',
-	'defarchitectures': ['i386', 'amd64'],
+	'defarchitectures': ['all', 'i386', 'amd64'],
 	'defrelease': ['testing'],
 	'gpgkey': None,
 	'store': 'pool',
