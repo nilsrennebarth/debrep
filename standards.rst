@@ -29,6 +29,16 @@ to readd it to obtain the correct sum::
   hashlib.md5(cd['Description'].encode()+b'\n').hexdigest()
 
 
+For a given release, there is one index per (arch, comp, compression),
+where arch runs over all architectures supported by the repo plus 'all'
+However, packages with architecture 'all' are contained in the Index
+for the binary architectures as well.
+compression should contain at least on of none, .gz, .bz2, the official
+debian mirror has .gz and .xz Strangely enough, uncompressed is mentioned
+in the Release, but not present
+
+For each index, there are 3 entries in the Releas file, for md5, SHA1, SHA256
+
 
 Code Snippets
 -------------

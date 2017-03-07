@@ -5,7 +5,7 @@ Add a package to the repository
 
 import logging, sys
 
-from debrep import config, package
+from debrep import config, index, package
 from debrep.store import pool
 
 def addBinary(path, db, store, component, release):
@@ -19,7 +19,7 @@ def addBinary(path, db, store, component, release):
 	logger.debug('Got package %s', str(pkg))
 	rid = db.relId(release)
 	if rid < 1:
-		logger.error("Unknown release '%s'", config.defrelease)
+		logger.error("Unknown release '%s'", release)
 		return
 	# TODO check if component is part of release
 	refs = db.getrefsAdd(pkg, rid)
@@ -75,6 +75,14 @@ def addBinary(path, db, store, component, release):
 				pkg.name, pkg.Version, release, component, pkg.id)
 
 
+def updateIndices(db, arch, component, release):
+	rid = db.relId(release)
+	if rid < 1:
+		logger.error("Unknown release '%s'", release)
+	idx = index.BinIndexer(arch, component, release, config.root)
+	idx.create(
+		db.getIndex(arch, component, rid)
+	)
 
 #
 # -------- main -------
@@ -85,6 +93,11 @@ logging.basicConfig(level=logging.DEBUG)
 config = config.Config()
 db = config.getDb()
 store = config.getStore()
-addBinary(sys.argv[1], db, store, 'main', config.defrelease)
+
+if sys.argv[1] == 'add':
+	addBinary(sys.argv[2], db, store, 'main', config.defrelease)
+elif sys.argv[1] == 'idx':
+	updateIndices(db, 'amd64', 'main', config.defrelease)
+
 db.close()
 

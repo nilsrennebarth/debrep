@@ -210,6 +210,20 @@ class Db:
 				result.append(ref)
 		return result
 
+	def getIndex(self, arch, component, idrel):
+		self.dbc.execute(
+			'''SELECT b.*
+			FROM release_bin r
+			JOIN binpackages b ON r.idpkg=b.id
+			WHERE r.idrel=? AND r.component=?
+				AND b.Architecture IN (?,'all')
+			ORDER BY b.name
+			''', (idrel, component, arch))
+		while True:
+			r = self.dbc.fetchone()
+			if r == None: return
+			yield dict(zip(r.keys(), r))
+
 	def addBinaryRef(self, id, component, idrel):
 		self.dbc.execute(
 			'''INSERT OR IGNORE INTO release_bin (idrel, component, idpkg)
