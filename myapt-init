@@ -1,0 +1,158 @@
+#!/bin/bash
+#
+# Create infrastructure so that apt can be run by a normal user and
+# independent from locally installed packages.
+#
+# Of course apt won't be able
+# to run dpkg, but getting lists and downloading packages does work,
+# and we can use apt's dependency resolution that way.
+#
+set -e
+
+MYKEY=Debrep
+MYREPO="http://localhost/~${USER}"
+MYDIST=jessie
+
+MIRROR=ftp.uni-stuttgart.de/debian/
+MIRRORSEC=ftp.uni-stuttgart.de/debian-security/
+
+
+while [[ $1 =~ --* ]]; do
+	case $1 in
+	--with-debian=*) WITH_DEBIAN=${1#--with-debian=} ;;
+	--with-debian)
+		if [ -n "$2" ] && [[ $2 != -* ]]; then
+			WITH_DEBIAN=${2};  shift;
+		else
+			WITH_DEBIAN=jessie
+		fi
+		;;
+	--*) echo "Unknown option $1, ignored" 1>&2
+	esac
+	shift
+done
+
+# create necessary directories
+CWD=$(pwd)
+BASE=$CWD/APT
+mkdir -p $BASE/etc/apt/apt.conf.d
+mkdir -p $BASE/var/lib/apt/lists/partial
+mkdir -p $BASE/var/cache/apt/archives/partial
+mkdir -p $BASE/var/lib/dpkg
+mkdir -p $BASE/etc/apt/trusted.gpg.d
+mkdir -p $BASE/etc/apt/preferences.d
+mkdir -p $BASE/etc/apt/sources.list.d
+touch    $BASE/var/lib/dpkg/status
+
+# create config
+cat <<EOF > $BASE/etc/apt/apt.conf
+#
+# Set all apt-paths to point to our base
+#
+
+APT {
+  Architecture "i386";
+  Architectures { "i386"; };
+  Install-Recommends "false";
+  Install-Suggests "false";
+};
+
+Acquire::Languages {"en"; }
+
+Dir "${BASE}/" {
+  State "var/lib/apt" {
+    lists "lists/";
+    status "${BASE}/var/lib/dpkg/status";
+    extended_states "extended_states";
+  };
+  Cache "var/cache/apt/" {
+    Archives "archives/";
+    Backup "backup/";
+    srcpkgcache "srcpkgcache.bin";
+    pkgcache "pkgcache.bin"; 
+  };
+  Etc "etc/apt/" {
+     Main "apt.conf";
+     Netrc "auth.conf";
+     Parts "apt.conf.d/";
+     Preferences "preferences";
+     PreferencesParts "preferences.d";
+     SourceList "sources.list";
+     SourceParts "sources.list.d";
+     VendorList "vendors.list";
+     VendorParts "vendors.list.d";
+     Trusted "trusted.gpg";
+     TrustedParts "trusted.gpg.d";
+  };
+  Bin {
+     methods "/usr/lib/apt/methods/";
+     gzip "/bin/gzip";
+     gpg  "/usr/bin/gpgv";
+     dpkg "/usr/bin/dpkg";
+     dpkg-source "/usr/bin/dpkg-source";
+     dpkg-buildpackage "/usr/bin/dpkg-buildpackage";
+     apt-get "/usr/bin/apt-get";
+     apt-cache "/usr/bin/apt-cache";
+  };
+};
+
+DPkg
+{
+  Options "--root=${BASE}";
+  Chroot-Directory "/";
+
+  // Prevents daemons from getting cwd as something mountable (default)
+  Run-Directory "/";
+
+  // Build options for apt-get source --compile
+  Build-Options "-b -uc";
+
+  // Pre-configure all packages before they are installed using debconf.
+  Pre-Install-Pkgs {"dpkg-preconfigure --apt --priority=low --frontend=dialog";};
+
+  // Flush the contents of stdin before forking dpkg.
+  FlushSTDIN "true";
+
+  // Control the size of the command line passed to dpkg.
+  MaxArgBytes 32768;
+  MaxArgs 8192;
+
+  // controls if apt will apport on the first dpkg error or if it 
+  // tries to install as many packages as possible
+  StopOnError "true";
+}
+
+
+Debug::NoLocking "true";
+
+EOF
+
+# initialize trustdb
+# note: need -q to exit with 0 even when it warns that keyring contains
+# no ultimately trusted key
+if [ ! -f $BASE/etc/apt/trusted.gpg ]; then
+	gpg -q --export "$MYKEY" \
+		| gpg -q --no-options --no-default-keyring \
+		--keyring $BASE/etc/apt/trusted.gpg --import --yes
+fi
+
+# initialize sources.list
+cat <<EOF > $BASE/etc/apt/sources.list
+deb $MYREPO $MYDIST main
+EOF
+
+
+if [ -n "$WITH_DEBIAN" ]; then
+	cp /etc/apt/trusted.gpg.d/debian-archive*.gpg \
+		$BASE/etc/apt/trusted.gpg.d
+	cat <<-EOF > $BASE/etc/apt/sources.list.d/${WITH_DEBIAN}.list
+	deb http://$MIRROR ${WITH_DEBIAN} main main/debian-installer
+	deb http://$MIRROR ${WITH_DEBIAN}-updates main
+	deb http://$MIRRORSEC ${WITH_DEBIAN}/updates main
+	EOF
+fi
+
+printf "Now do\nexport APT_CONFIG=$BASE/etc/apt/apt.conf\n"
+
+exit 0
+
