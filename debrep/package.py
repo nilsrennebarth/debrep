@@ -61,8 +61,7 @@ def getBinFromDeb(fname):
 	'''
 	dfile = DebFile(fname)
 	cdict = dfile.debcontrol()
-	csums = utils.get_hashes(fname)
-	return BinPackageDeb(
+	result = BinPackageDeb(
 		id = -1,
 		name = cdict['Package'],
 		control = dfile.control.get_content('control', 'utf-8'),
@@ -70,16 +69,13 @@ def getBinFromDeb(fname):
 		Version = cdict['Version'],
 		Architecture = cdict['Architecture'],
 		udeb = fname.endswith('.udeb'),
-		Size = csums.size,
-		MD5Sum = csums.md5,
-		SHA1 = csums.sha1,
-		SHA256 = csums.sha256,
 		Description_md5 = hashlib.md5(
 			cdict['Description'].encode() + b'\n').hexdigest(),
 		debfile = dfile,
 		origfile = fname
 	)
-
+	result.__dict__.update(utils.Hasher.hash(fname)._asdict())
+	return result
 
 
 class BinPackageDb(BinPackage):
