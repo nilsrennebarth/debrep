@@ -86,8 +86,7 @@ administration commands.
 
 TODO
 ----
-- write and update indices
-  - objectify release config
+- write and update changed indices, sign the release
 - commandline args parsing
   - add a -c --config option to take the configuration from
   - use a general argument parser and a (sub-) command specific one
@@ -211,17 +210,25 @@ Toplevel is a Mapping with keys
     optional if dbtype is sqlite, in this case the path to the
     database defaults to `root`/``db/repo.db``
   dbtype
-    One of sqlite, mysql
+    One of sqlite or mysql. Optionsal, default is sqlite
   layout
-    One of pool or bydist (optional, default is pool)
-  gpgkey
-    Id of the GPG key to sign releases that don't specify
-    their own key. (optional, but then each release must specify one)
+    One of pool or bydist. Optional, default is pool
+  defgpgkey
+    default GPG key to sign the releases with.
+    Optional, if omitted, defaults to the user's first secret key.
   defrelease
-    Name of the default release to add to if none is given. (optional,
-    default is the first writeable release
+    Name of the default release to add to if none is given.
+    Optional, default is the first writeable release
   defarchitectures
-    A sequence of architectures (i.e. strings)
+    A set of architectures. Optional, default is {all, amd64, i386}
+  indexcompressors
+    A set of compression methods to use for compressing the indices.
+    Possible values none, gz, bz2, xz. Default { gz, xz }
+  indexarchall
+    True means to create a separate index for architecture 'all'
+    packages and omit those from the architecture specific indices.
+    This is the default. False means to merge architeture 'all'
+    packages into the architecture specific indices.
   releases
     A sequence of releases, each a mapping
 
@@ -241,7 +248,7 @@ A release is a mapping with keys
     sequence of strings. First one is the default for package
     operations
   architectures
-    Sequence of strings. It is an error to add a binary package with an
+    Set of strings. It is an error to add a binary package with an
     architecture not mentioned. Optional if defarchitectures is given.
 
 The config file is named ``debrep.conf`` and is searched (in this order)
