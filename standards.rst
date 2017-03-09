@@ -86,3 +86,19 @@ gpg invocations to sign release files::
      | gpg --no-tty --batch --passphrase-fd=0 --default-key "$KEYID" \
        --clearsign -o InRelease.tmp "$1"
 
+
+In python, without passphrase::
+
+   import subprocess
+   res = subprocess.run(['gpg', '--no-tty', '--batch', '--default-key',
+     'debrep', '--clearsign', '-o', 'test.conf.inline', 'test.conf'])
+   res = subprocess.run(['gpg', '--no-tty', '--batch', '--default-key',
+     'debrep', '--detach-sign', '-o', 'test.conf.gpg', 'test.conf'])
+
+ Listing of releases in sqlite3::
+
+   select r.Codename, b.component, p.id, name, Version
+   from release_bin b
+   join binpackages p on b.idpkg = p.id
+   join releases r on b.idrel = r.id
+
