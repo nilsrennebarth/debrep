@@ -26,6 +26,7 @@ def addBinary(path, db, store, component, relname):
 	logger.debug('Got package %s', str(pkg))
 	release = getRelease(relname)
 	if release == None: return
+	if component == None: component = release.components[0]
 	# TODO check if component is part of release
 	refs = db.getrefsAdd(pkg, release.id)
 	id = searchContent(refs, pkg.SHA256)
@@ -99,7 +100,7 @@ db = config.getDb()
 store = config.getStore()
 
 if sys.argv[1] == 'add':
-	addBinary(sys.argv[2], db, store, 'main', config.defrelease)
+	addBinary(sys.argv[2], db, store, None, config.defrelease)
 elif sys.argv[1] == 'idx':
 	updateIndices(db, 'amd64', 'main', config.defrelease)
 

@@ -18,7 +18,7 @@ def sum():
 
 	return summer()
 
-class Hashes(collections.namedtuple('Hashes', 'Size MD5 SHA1 SHA256')):
+class Hashes(collections.namedtuple('Hashes', 'Size MD5Sum SHA1 SHA256')):
 	def __str__(self):
 		return 'Hashes(\n ' \
 			+ '\n '.join(map(lambda x: x + ' = '+ getattr(self, x), \

@@ -103,7 +103,7 @@ class Db:
 				'''INSERT INTO releases (Codename) VALUES (?)''',
 				(release.name,)
 			)
-			release.id = dbc.lastrowid
+			release.id = self.dbc.lastrowid
 
 	def initdb(self):
 		'''
