@@ -76,25 +76,34 @@ class Db:
 		self.dbc.execute('INSERT INTO dbschema VALUES (:v)', dict(v=Db.version))
 		self.db.commit()
 
-	def relId(self, name):
-		self.dbc.execute('SELECT id FROM releases WHERE Codename=?', (name,))
-		r = self.dbc.fetchone()
-		return -1 if r == None else r[0]
-
-	def mkreleases(self, releases):
+	def syncreleases(self, releases):
 		'''
-		Create releases enumerated in the config
+		Synchronize releases with those enumerated in the config
 
-		If a release with the given name does not exist it will be
-		created now. We don't delete any that we don't find in the
-		config.
+		If a release mentioned in the config exists, its id is set to the
+		one obtained from db. If a relase mentioned in the config is not
+		in the db, it is created and its id set to the newly created one.
+		If a release is in the db but not in the config, we will generate
+		a warning, but leave it to the user to actually delete it.
 		'''
-		for release in releases:
-			if self.relId(release['name']) < 1:
-				self.dbc.execute(
-					'''INSERT INTO releases (Codename) VALUES (?)''',
-					(release['name'],)
-				)
+		# First get all releases from the database and set id in config
+		self.dbc.execute('SELECT id,Codename FROM releases')
+		for row in self.dbc.fetchall():
+			id, name = row
+			if name in releases:
+				releases[name].id = id
+			else:
+				logger.warning("Relase with codename %s exists in the "
+					"database but not in the configuration. You might want "
+					"to purge it from the database", name)
+		# Next create all releases new in config
+		for release in releases.values():
+			if hasattr(release, 'id'): continue
+			self.dbc.execute(
+				'''INSERT INTO releases (Codename) VALUES (?)''',
+				(release.name,)
+			)
+			release.id = dbc.lastrowid
 
 	def initdb(self):
 		'''
@@ -118,7 +127,7 @@ class Db:
 		self.db.row_factory = sqlite3.Row
 		self.dbc = self.db.cursor()
 		self.initdb()
-		self.mkreleases(config.releases)
+		self.syncreleases(config.releases)
 
 	def newBinary(self, pkg):
 		'''
