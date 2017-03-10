@@ -219,15 +219,15 @@ class Db:
 				result.append(ref)
 		return result
 
-	def getIndex(self, arch, component, idrel):
-		self.dbc.execute(
-			'''SELECT b.*
+	def getIndex(self, arch, component, idrel, with_all=False):
+		sql = '''SELECT b.*
 			FROM release_bin r
 			JOIN binpackages b ON r.idpkg=b.id
 			WHERE r.idrel=? AND r.component=?
-				AND b.Architecture IN (?,'all')
+				AND b.Architecture {}
 			ORDER BY b.name
-			''', (idrel, component, arch))
+			'''.format("IN ('all', ?)" if with_all else "= ?")
+		self.dbc.execute(sql, (idrel, component, arch))
 		while True:
 			r = self.dbc.fetchone()
 			if r == None: return

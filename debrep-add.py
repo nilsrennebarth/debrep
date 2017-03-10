@@ -3,7 +3,7 @@
 Add a package to the repository
 '''
 
-import logging, sys
+import locale, logging, sys
 
 from debrep import config, index, package
 from debrep.store import pool
@@ -81,13 +81,10 @@ def addBinary(path, db, store, component, relname):
 				pkg.name, pkg.Version, relname, component, pkg.id)
 
 
-def updateIndices(db, arch, component, relname):
+def updateRelease(db, relname, config):
 	release = getRelease(relname)
 	if release == None: return
-	idx = index.BinIndexer(arch, component, relname, config.root)
-	idx.create(
-		db.getIndex(arch, component, release.id)
-	)
+	idx = index.updateRelease(release, db, config)
 
 #
 # -------- main -------
@@ -99,10 +96,14 @@ config = config.getConfig()
 db = config.getDb()
 store = config.getStore()
 
+# set time locale to C so strftime outputs proper week names
+# as debian insists on RFC822 date format (sigh!)
+locale.setlocale(locale.LC_TIME, 'C')
+
 if sys.argv[1] == 'add':
 	addBinary(sys.argv[2], db, store, None, config.defrelease)
 elif sys.argv[1] == 'idx':
-	updateIndices(db, 'amd64', 'main', config.defrelease)
+	updateRelease(db, sys.argv[2], config)
 
 db.close()
 
