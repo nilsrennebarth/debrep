@@ -61,8 +61,9 @@ The following options are common to all subcommands:
    add to, remove from, list only the given architecture(s). Several
    architectures can be given as a comma separated list
 
- -o, --option <optname>=<optvalue>
-   set a configuration option. Options given on the commandline override
+ -o, --option <optassignment>
+   set a configuration option. `optassignment` has the form
+   `optname` *=* `optvalue` Options given on the commandline override
    those given in the configuration file
 
  -c,--config <conffile>
