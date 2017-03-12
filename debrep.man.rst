@@ -66,7 +66,7 @@ The following options are common to all subcommands:
    `optname` *=* `optvalue` Options given on the commandline override
    those given in the configuration file
 
- -c,--config <conffile>
+ -c, --config <conffile>
    use the given configuration file. See ``debrep.conf``\(5) for the
    config file syntax
 
