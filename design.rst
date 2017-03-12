@@ -37,7 +37,7 @@ Possible feature ideas, taken from reprepro
 - as we use gpg from the commandline, we need to be able to specify its
   home, most probably in a configuration setting
 - allow to specify package listing output by using a template of some kind,
-  probably something wich directly comes with pyton. In addition to the normal
+  probably something wich directly comes with python. In addition to the normal
   Variables given by the debian specified fields of a package, some more might
   be useful, e.g. id, architecture, component, type (i.e. deb, udeb, dsc), and
   distribution, It also might be useful, to split the filename into at least
@@ -50,6 +50,7 @@ Possible feature ideas, taken from reprepro
 - handle override files
 - copy or move packages between distributions.
 - snapshots
+- Dnotify to support an incoming directory and ChangeFile
 
 
 
@@ -75,18 +76,8 @@ Existing software
     seems too simple, uses perl
 
 
-We might take some useful code from mini-dinstall: DpkgControl which parses a
-dpkg control file (together with the other classes it depends on:
-DpkgDatalist minidistall.SignedFile, OrderedDict, minidinstall.SafeWriteFile),
-Dnotify to support an incoming directory and ChangeFile
-
-So what we basically do is, to extend mini-dinstall to hava a databbase in
-the background and to several file store backends plus distribution
-administration commands.
-
 TODO
 ----
-- write and update changed indices, sign the release
 - commandline args parsing
   - add a -c --config option to take the configuration from
   - use a general argument parser and a (sub-) command specific one
@@ -97,20 +88,85 @@ TODO
 - Move between components
 - source Packages
 - new db and store implementations:
+
+  - check the used abstractions, tweak them a bit, use a base class to
+    provide helpers or high-level actions sharing some code across different
+    implementation.
   - a release store, hardlink based
   - a mysql database backend
 
+
+Usage
+-----
+debrep must be given an 'action' which then determines the other
+arguments. We use the sub-commands facility of pythons argparse
+module.
+
+  add
+    add package(s) to repository. Following args are .deb packages,
+    possibly with C=component or R=release interspersed.
+
+  del rm
+    delete packages from repository. Following are package names
+    or generally: globs, possibly interspersed with R=release
+
+  ls
+    lists packages. restrict to release and or component, may be
+    followed by name globs
+
+  mv
+    move packages from one release/component to another.
+
+General options
+~~~~~~~~~~~~~~~
+The -v -s concept to increase or decrease the verbosity seems ok,
+use it.
+
+Allow to override various config settings from commandline. We won't e.g.
+move a store that way. If a store isn't present at the given location,
+results are undefined. -o <opt>=<value> --option <opt>=<value>
+For a specific release, options can be set using release.<codename>.<relopt>,
+so e.g. Description, Label, Version, Suite can be changed for a single
+invocation. Codename can't be changed as it is used access the specific
+release object.
+
+Giving things like db, or root on the commandline, with the possiblity of
+mixing data from various place which might not fit together is not
+recommended. Those should be set the same for each invocation and the
+canonical way of doing that is to create a config file.
+
+An argument for a long option may be separated from the option either by
+whitespace or an equal sign. An argument for a short option may either
+follow the option directly or separated by whitespace. Also as usual,
+short options can be concatenated, but only the last one may take an
+argument.
+
+ -C, --component <component>
+   add to, remove from, list only this component. For del and ls, might
+   use a comma separated list.
+
+ -R, --release <release>
+   add to, remove from, list only this release. For del and ls, might
+   use a comma separated list
+
+ -A, --architecture <architecture>
+   add to, remove from, list only the given architecture(s). Several
+   architectures can be given as a comma separated list
+
+ -V, --version
+   just output the program version and exit
 
 
 Database
 --------
 Tables
 
-- Packages (for .deb and .udeb)
-- Sources
-- Releases
+- binpackages (for .deb and .udeb)
+- srcpackages (for .dsc)
+- releases
+- release_pkg and release_src
 
-Packages
+binpackages
 ~~~~~~~~
 Hold all binary Packages, i.e. over all distributions. It will held .deb and
 .udeb Packages and all associated data. Column ``control`` will hold the full
@@ -138,7 +194,7 @@ Table definition::
     Description_md5 TEXT
   )
 
-Releases
+releases
 ~~~~~~~~
 Hold a Release, i.e. the meta data of a relase::
 
@@ -147,6 +203,8 @@ Hold a Release, i.e. the meta data of a relase::
     Codename TEXT,
   )
 
+others
+~~~~~~
 The information what packages belong to a release is held in separate tables
 because these are lists::
 
@@ -270,6 +328,7 @@ possible operations that need to be implemented.
 Database
 ~~~~~~~~
 Lowlevel ops:
+
 - Enter new BinPackage to given release, component. Set id to
   newly generated one.
 - Add existing Package id to release, component.
