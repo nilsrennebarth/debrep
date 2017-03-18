@@ -13,7 +13,7 @@ _top_options = {
 	'dbtype': 'sqlite',
 	'defarchitectures': set(['all', 'amd64', 'i386']),
 	'defcomponents': [ 'main' ],
-	'defrelease': ['testing'],
+	'defrelease': None,
 	'defgpgkey': None,
 	'store': 'pool',
 	'root': None,
@@ -107,6 +107,11 @@ def getConfig(file=None):
 	set_specific_defaults(top)
 	set_general_defaults(top)
 	set_releases(top)
+	# only now can we determine the default release if not already set
+	if top.defrelease == None:
+		for release in top.releases.values():
+			if realease.readonly: continue
+			top.defrelease = release
 	logger.debug("Config:\n %s", str(top))
 	return top
 

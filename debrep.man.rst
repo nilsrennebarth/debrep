@@ -97,7 +97,13 @@ It is followed by one or more package names.
 List packages
 -------------
 The *ls* or *list* subcommand list the content of the repository.
-It takes to following options:
+It can be followed by a possibly empty list of patterns which are
+used as patters following the Unix file globbing syntax. That of
+course means you probably need to quote metacharacters to prevent
+the shell from expanding them. If no patterns are listed on the
+commandline the whole repository is listed.
+
+It takes the following options:
 
  -f, --format <template>
   Use `template` to format the output of a single package. It can
@@ -114,6 +120,35 @@ It takes to following options:
   Filename
     the filename relative the the repository root directory
 
+ -p, --pattern <pattern>
+  List packages matching the given patterns. Shell globbing syntax
+  is used. Useful to prevent shell expansion of the pattern, when
+  given in the ``-pfoo*f`` or ``--pattern=*bar`` form. This option
+  can be repeated several times.
+
+Move packages
+-------------
+Moving is a convenience method in case either some packages went to
+the wrong place or the repository layout changes. The same effect
+could be achieved by fetching the packages using apt, delete them
+with ``debrep del`` and readd them with ``debrep add``.
+It needs at least one of the following options:
+
+ --tr <release> target release
+ --tc <compoonent> target component
+
+The remaining options are names of packages that are to be moved.
+
+If only a target release is given, packages are moved from one
+release to the other, but keeping their componenent. Packages
+where the component does not exist in the target release will
+not be moved and generate error messaages.
+
+If only a target component is given, packages from the given
+release (or the default release) are moved from their current
+component to the target. If the target comonent does not exist
+in one of the releases, the release remains unchanged and an
+error message is generated.
 
 EXAMPLES
 ========

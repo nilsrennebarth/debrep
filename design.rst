@@ -84,8 +84,10 @@ TODO
 - listings
 - check architecture
 - delete packages
+- readonly releases
 - copy release
 - Move between components
+- allow wildcards for del and move
 - source Packages
 - new db and store implementations:
 
@@ -366,6 +368,27 @@ Lowlevel ops:
 - Remove a reference to a file
 - Remove the last reference to a file
 
+Index cache
+-----------
+We use an index cache to only regenerate indices that have been changed.
+The global cache is a dictionary indexed by release name, the value is
+a ReleaseCache. A ReleaseCache has a dirty flag and a dictionary
+indexed by CompArch, a named tuple having component and arch.
+The values are objects CompArchCache, having a dirty flag
+and the list of index sums as returned by the BinIndexer.create()
+method. Each list member is a tuple with the filename as the first
+field and another tuple as the second field which in turn is
+an instance of our Hashes class, a namedtuple with size and the three
+hashes MD5Sum, SHA1 and SHA256.
+
+The cache is initialized upon start, to just contain a clean
+release entry for each release. As soon as the entry later gets dirtied,
+the release file is read in, and all (comp, arch) pairs marked
+as clean, except the just dirtied one of course. The values of all
+other (comp,arch) pairs are read from the release file.
+
+Later, more (comp,arch) pairs might be marked dirty, and finally
+all dirty entries need to be regenerated.
 
 Terminology
 -----------

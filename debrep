@@ -3,19 +3,18 @@
 Maintain a repository of debian packages
 '''
 
-import locale, logging, sys
+import argparse, locale, logging, sys
 
 from dr_lib import config, index, package
-from dr_lib.store import pool
 
-def getRelease(relname):
-	if relname in config.releases:
-		return config.releases[relname]
-	else:
-		logger.error("Unknown release '%s'", relname)
-		return None
+class ArgError(Exception):
+	def __init__(self,msg):
+		self._msg = msg
+	def __str__(self):
+		return self._msg
 
-def addBinary(path, db, store, component, relname):
+
+def addBinary(path, db, store, component, release):
 
 	def searchContent(refs, checksum):
 		for ref in refs:
@@ -24,10 +23,6 @@ def addBinary(path, db, store, component, relname):
 
 	pkg = package.getBinFromDeb(path)
 	logger.debug('Got package %s', str(pkg))
-	release = getRelease(relname)
-	if release == None: return
-	if component == None: component = release.components[0]
-	# TODO check if component is part of release
 	refs = db.getrefsAdd(pkg, release.id)
 	id = searchContent(refs, pkg.SHA256)
 	if id != -1:
@@ -40,7 +35,7 @@ def addBinary(path, db, store, component, relname):
 			return
 		logger.info("Package '%s' with given content already in repo. Reusing",
 			pkg.name)
-		store.addBinaryRef(pkg, component, relname)
+		store.addBinaryRef(pkg, component, release.name)
 		db.addBinaryRef(refs[0].id, component, release.id)
 		return
 	# The given content is not present in the repo.
@@ -51,59 +46,138 @@ def addBinary(path, db, store, component, relname):
 	if len(refs) > 0 and refs[0].idrel == release.id:
 		logger.debug('Need to replace %s_%s ', pkg.name, pkg.Version)
 		# Yes, need to replace an existing package P_old
-		# TODO refuse if upgradeOnly
+		# TODO: refuse if upgradeOnly
 		# Is P_old referenced elsewhere?
 		if searchContent(refs[1:], refs[0].SHA256) != -1:
 			logger.debug('Remove %s_%s from %s but keep it in repo',
-				pkg.name, pkg.Version, relname)
+				pkg.name, pkg.Version, release.name)
 			# Yes it is, remove reference from target release.
 			# Package will get a new id by default
 			store.delBinaryRef(refs)
 			db.delBinaryRef(refs[0].id, release.id)
 		else:
 			logger.debug('Remove %s_%s from %s',
-				pkg.name, pkg.Version, relname)
+				pkg.name, pkg.Version, release.name)
 			# Not it is not, remove it from store and recycle the
 			# package id
 			store.delBinaryLastRef(refs[0])
 			pkg.id = refs[0].id
 	# Now do an add or replace, depending on pkg.id
 	if pkg.id == -1:
-		store.addBinary(pkg, component, relname)
+		store.addBinary(pkg, component, release.name)
 		db.newBinary(pkg)
 		db.addBinaryRef(pkg.id, component, release.id)
 		logger.info("Added package %s_%s to %s/%s with new id %d",
-			pkg.name, pkg.Version, relname, component, pkg.id)
+			pkg.name, pkg.Version, release.name, component, pkg.id)
 	else:
-		store.addBinary(pkg, component, relname)
+		store.addBinary(pkg, component, release.name)
 		db.replaceBinary(pkg)
 		logger.info("Added package %s_%s to %s/%s under id %d",
-				pkg.name, pkg.Version, relname, component, pkg.id)
+				pkg.name, pkg.Version, release.name, component, pkg.id)
+
+def argParser():
+	# common parser
+	com = argparse.ArgumentParser()
+	subparsers = com.add_subparsers(
+		title='actions', description='debrep allows the following actions',
+		help='where is this?')
+	# action add
+	add = subparsers.add_parser('add')
+	add.addargument('debs', nargs='+')
+	add.set_defaults(impl=doAdd)
+	# action del
+	del = subparsers.add_parser('del', aliases='rm')
+	del.addargument('names', nargs='+')
+	del.set_defaults(impl=doDel)
+	# action list
+	list = subparsers.add_parser('list', aliases='ls')
+	list.addargument('-f', '--format')
+	list.addargument('names', nargs= '*')
+	list.set_defaults(impl=doList)
+	# action move
+	move = subparsers.add_parser('move', aliases='mv')
+	move.addargument('--tc')
+	move.addargument('--tr')
+	move.addargument('names', nargs='+')
+	move.set_defaults(impl=doMove)
+	# common options
+	com.addargument('-C', '--component')
+	com.addargument('-R', '--release')
+	com.addargument('-A', '--architecture')
+	com.addargument('-c', '--config')
+
+def updateReleases():
+	# set time locale to C so strftime outputs proper week names
+	# as debian insists on RFC822 date format (sigh!)
+	locale.setlocale(locale.LC_TIME, 'C')
+
+	for relname, releases in config.releases.items():
+		if index.cacheRelIsDirty(relname):
+			index.updateRelease(release, db, config)
+
+def getRelease(relname):
+	if relname in config.releases:
+		return config.releases[relname]
+	else:
+		raise ArgError("Unknown release '%s'" % relname)
+
+def doAdd(args):
+	# determine initial release
+	if args.release != None:
+		release = getRelease(args.release)
+	else
+		release = config.defrelease
+	# determine initial component
+	if args.component != None:
+		comp = args.component
+		if comp not in release.components:
+			raise ArgError("Unknonw component '%s' in release %s"
+				% (comp, release.name))
+	else:
+		comp = release.components[0]
+	for fname in args.debs:
+		if fname.startswith('R='):
+			try:
+				release = getRelease(fname[2:])
+			except ArgError:
+				print("Unknown release '%s', ignoring all further packages"
+					  % fname[2:], file=sys.stderr)
+				break
+			continue
+		if fname.startswith('C='):
+			if fname[2:] not in release.components:
+				print("Unknown component '%s' in release %s, ignoring all "
+					"further packages" % (fname[2:], release.name))
+				break
+			comp = fname[2:]
+			continue
+		addBinary(fname, db, store, comp. release)
 
 
-def updateRelease(db, relname, config):
-	release = getRelease(relname)
-	if release == None: return
-	idx = index.updateRelease(release, db, config)
+def doDel(args):
+	print("Del not implemented", file=sys.stderr)
+
+def doList(args):
+	print("List not implemented", file=sys.stderr)
+
+def doMove(args):
+	print("Move not implemented", file=sys.stderr)
+
+
 
 #
 # -------- main -------
 #
 logger = logging.getLogger('main')
+# TODO: depend on config
 logging.basicConfig(level=logging.DEBUG)
 
-config = config.getConfig()
+
+args = argParser().parse_args()
+config = config.getConfig(args)
 db = config.getDb()
 store = config.getStore()
 
-# set time locale to C so strftime outputs proper week names
-# as debian insists on RFC822 date format (sigh!)
-locale.setlocale(locale.LC_TIME, 'C')
-
-if sys.argv[1] == 'add':
-	addBinary(sys.argv[2], db, store, None, config.defrelease)
-elif sys.argv[1] == 'idx':
-	updateRelease(db, sys.argv[2], config)
-
+args.impl(args)
 db.close()
 

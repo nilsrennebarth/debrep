@@ -3,7 +3,7 @@
 Create an index file from an iterator that yields packages
 '''
 
-import datetime, os, os.path, subprocess
+import collections, datetime, os, os.path, subprocess, types
 import bz2, lzma, zlib
 from utils import Hasher, Hashes
 
@@ -141,6 +141,53 @@ def _signRelease(release, root, key):
 		'--clearsign', '-o', inlfile, relfile
 	])
 
+
 def updateRelease(release, db, config):
 	_updateRelease(release, db, config.root)
 	_signRelease(release, config.root, release.gpgkey)
+
+
+CompArch = collections.namedtuple('CompArch', 'comp arch')
+
+class ReleaseCache(types.SimpleNamespace):
+	'''
+	Cache index checksums for a release
+	'''
+
+	def __init__(self, release):
+		self.dirty = False
+		self.cacaches = dict()
+		self.release = release
+
+	def clear(self):
+		for comp in self.release.components:
+			for arch in self.release.architectures:
+				ca = CompArch(comp, arch)
+				self.cacaches[ca] = CompArchCache()
+
+	def dirtyCA(comp, arch):
+		self.dirty = True
+		if len(self.cacaches) == 0:
+			self.clear()
+		self.cacaches[CompArch(comp, arch)].dirty = True
+
+class CompArchCache(types.SimpleNamespace):
+	'''
+	Cache index checksums for a CompArch pair
+	'''
+
+	def __init__(self):
+		self.dirty = False
+		self.isums = []
+
+_RepoCache = {}
+
+def cacheInit(config):
+	for release in config.releases.keys():
+		_RepoCache[release] = ReleaseCache(release)
+
+def cacheDirty(rel, comp. arch):
+	_RepoCache[rel].dirtyCA(comp, arch)
+
+def cacheRelIsDirty(rel):
+	return _RepoCache[rel].dirty

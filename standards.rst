@@ -116,3 +116,12 @@ In python, without passphrase::
    join binpackages p on b.idpkg = p.id
    join releases r on b.idrel = r.id
 
+Parse the release file using::
+
+    with open('Release', 'r') as f:
+        rel = debian.deb822.Deb822(f)
+    for l in rel['SHA256'].splitlines();
+        (hash, size, file) = l.split()
+
+Then, the file can be added to the list with given hash and size,
+All has to be repeated for MD5Sum and SHA1 as well.
