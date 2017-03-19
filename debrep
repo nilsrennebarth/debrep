@@ -23,6 +23,10 @@ def addBinary(path, db, store, component, release):
 
 	pkg = package.getBinFromDeb(path)
 	logger.debug('Got package %s', str(pkg))
+	if pkg.Architecture not in release.architectures:
+		print("Ignore '%s', architecture %s not in release %s"
+			% (path, pkg.Architecture, release.name), file=sys.stderr)
+		return
 	refs = db.getrefsAdd(pkg, release.id)
 	id = searchContent(refs, pkg.SHA256)
 	if id != -1:
@@ -37,6 +41,7 @@ def addBinary(path, db, store, component, release):
 			pkg.name)
 		store.addBinaryRef(pkg, component, release.name)
 		db.addBinaryRef(refs[0].id, component, release.id)
+		index.cacheDirty(release.name, component, pkg.Architecture)
 		return
 	# The given content is not present in the repo.
 	# Can we add it at all? TODO: check if strict and if same version
@@ -74,6 +79,8 @@ def addBinary(path, db, store, component, release):
 		db.replaceBinary(pkg)
 		logger.info("Added package %s_%s to %s/%s under id %d",
 				pkg.name, pkg.Version, release.name, component, pkg.id)
+	index.cacheDirty(release.name, component, pkg.Architecture)
+
 
 def argParser():
 	# common parser
@@ -83,36 +90,37 @@ def argParser():
 		help='where is this?')
 	# action add
 	add = subparsers.add_parser('add')
-	add.addargument('debs', nargs='+')
+	add.add_argument('debs', nargs='+')
 	add.set_defaults(impl=doAdd)
 	# action del
-	del = subparsers.add_parser('del', aliases='rm')
-	del.addargument('names', nargs='+')
-	del.set_defaults(impl=doDel)
+	delete = subparsers.add_parser('del', aliases='rm')
+	delete.add_argument('names', nargs='+')
+	delete.set_defaults(impl=doDel)
 	# action list
 	list = subparsers.add_parser('list', aliases='ls')
-	list.addargument('-f', '--format')
-	list.addargument('names', nargs= '*')
+	list.add_argument('-f', '--format')
+	list.add_argument('names', nargs= '*')
 	list.set_defaults(impl=doList)
 	# action move
 	move = subparsers.add_parser('move', aliases='mv')
-	move.addargument('--tc')
-	move.addargument('--tr')
-	move.addargument('names', nargs='+')
+	move.add_argument('--tc')
+	move.add_argument('--tr')
+	move.add_argument('names', nargs='+')
 	move.set_defaults(impl=doMove)
 	# common options
-	com.addargument('-C', '--component')
-	com.addargument('-R', '--release')
-	com.addargument('-A', '--architecture')
-	com.addargument('-c', '--config')
+	com.add_argument('-C', '--component')
+	com.add_argument('-R', '--release')
+	com.add_argument('-A', '--architecture')
+	com.add_argument('-c', '--config')
+	return com
 
 def updateReleases():
 	# set time locale to C so strftime outputs proper week names
 	# as debian insists on RFC822 date format (sigh!)
 	locale.setlocale(locale.LC_TIME, 'C')
 
-	for relname, releases in config.releases.items():
-		if index.cacheRelIsDirty(relname):
+	for release in config.releases.values():
+		if index.cacheRelIsDirty(release.name):
 			index.updateRelease(release, db, config)
 
 def getRelease(relname):
@@ -122,11 +130,13 @@ def getRelease(relname):
 		raise ArgError("Unknown release '%s'" % relname)
 
 def doAdd(args):
+	index.cacheInit(config)
 	# determine initial release
 	if args.release != None:
 		release = getRelease(args.release)
-	else
+	else:
 		release = config.defrelease
+	logger.debug("Add package to release %s" % release)
 	# determine initial component
 	if args.component != None:
 		comp = args.component
@@ -151,7 +161,8 @@ def doAdd(args):
 				break
 			comp = fname[2:]
 			continue
-		addBinary(fname, db, store, comp. release)
+		addBinary(fname, db, store, comp, release)
+	updateReleases()
 
 
 def doDel(args):

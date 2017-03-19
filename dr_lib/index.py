@@ -3,9 +3,11 @@
 Create an index file from an iterator that yields packages
 '''
 
-import collections, datetime, os, os.path, subprocess, types
+import collections, datetime, logging, os, os.path, subprocess, types
 import bz2, lzma, zlib
 from utils import Hasher, Hashes
+
+logger = logging.getLogger(__name__)
 
 class NoneCompressor:
 	def compress(self, data): return data
@@ -132,17 +134,18 @@ def _signRelease(release, root, key):
 	relfile = os.path.join(root, 'dists', release.name, 'Release')
 	inlfile = os.path.join(root, 'dists', release.name, 'InRelease')
 	sigfile = relfile + '.gpg'
-	os.remove(sigfile)
+	if os.path.exists(sigfile): os.remove(sigfile)
 	res = subprocess.run(gpgargs + [
 		'--detach-sign', '-o', sigfile, relfile
 	])
-	os.remove(inlfile)
+	if os.path.exists(inlfile): os.remove(inlfile)
 	res = subprocess.run(gpgargs + [
 		'--clearsign', '-o', inlfile, relfile
 	])
 
 
 def updateRelease(release, db, config):
+	logger.debug("Update release '%s'", release.name)
 	_updateRelease(release, db, config.root)
 	_signRelease(release, config.root, release.gpgkey)
 
@@ -165,7 +168,7 @@ class ReleaseCache(types.SimpleNamespace):
 				ca = CompArch(comp, arch)
 				self.cacaches[ca] = CompArchCache()
 
-	def dirtyCA(comp, arch):
+	def dirtyCA(self, comp, arch):
 		self.dirty = True
 		if len(self.cacaches) == 0:
 			self.clear()
@@ -183,10 +186,10 @@ class CompArchCache(types.SimpleNamespace):
 _RepoCache = {}
 
 def cacheInit(config):
-	for release in config.releases.keys():
-		_RepoCache[release] = ReleaseCache(release)
+	for release in config.releases.values():
+		_RepoCache[release.name] = ReleaseCache(release)
 
-def cacheDirty(rel, comp. arch):
+def cacheDirty(rel, comp, arch):
 	_RepoCache[rel].dirtyCA(comp, arch)
 
 def cacheRelIsDirty(rel):

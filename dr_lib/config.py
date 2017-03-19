@@ -37,7 +37,7 @@ def _del_unknowns(orig, proto):
 		if k not in proto: del orig[k]
 	return orig
 
-def getConfig(file=None):
+def getConfig(args):
 
 	def tryconf(path):
 		nonlocal config_dict
@@ -91,8 +91,8 @@ def getConfig(file=None):
 		cfg.releases = releases
 
 	config_dict = {}
-	if file != None:
-		if not tryconf(file):
+	if args.config != None:
+		if not tryconf(args.config):
 			raise ConfigError('File not foud: %s ' % file)
 		set_specific_defaults = local_defaults
 	elif tryconf('./config'):
@@ -112,6 +112,10 @@ def getConfig(file=None):
 		for release in top.releases.values():
 			if realease.readonly: continue
 			top.defrelease = release
+	else:
+		if top.defrelease not in top.releases:
+			raise ConfigError("Unknown defrelease '%s'" % top.defrelease)
+		top.defrelease = top.releases[top.defrelease]
 	logger.debug("Config:\n %s", str(top))
 	return top
 
