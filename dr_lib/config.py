@@ -116,7 +116,8 @@ def getConfig(args):
 		if top.defrelease not in top.releases:
 			raise ConfigError("Unknown defrelease '%s'" % top.defrelease)
 		top.defrelease = top.releases[top.defrelease]
-	logger.debug("Config:\n %s", str(top))
+	# too verbose
+	# logger.debug("Config:\n %s", str(top))
 	return top
 
 

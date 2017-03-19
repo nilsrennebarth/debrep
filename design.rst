@@ -78,10 +78,10 @@ Existing software
 
 TODO
 ----
-- commandline args parsing
-  - add a -c --config option to take the configuration from
-  - use a general argument parser and a (sub-) command specific one
 - listings
+- when adding, check if given component exists in release, and if a
+  package is to be replaced, check that the component is the same,
+  or allow a --force-replace-component or similar
 - check architecture
 - delete packages
 - readonly releases

@@ -23,6 +23,7 @@ def addBinary(path, db, store, component, release):
 
 	pkg = package.getBinFromDeb(path)
 	logger.debug('Got package %s', str(pkg))
+	logger.debug('Add package to %s/%s', release.name, component)
 	if pkg.Architecture not in release.architectures:
 		print("Ignore '%s', architecture %s not in release %s"
 			% (path, pkg.Architecture, release.name), file=sys.stderr)
@@ -141,7 +142,7 @@ def doAdd(args):
 	if args.component != None:
 		comp = args.component
 		if comp not in release.components:
-			raise ArgError("Unknonw component '%s' in release %s"
+			raise ArgError("Unknown component '%s' in release %s"
 				% (comp, release.name))
 	else:
 		comp = release.components[0]
