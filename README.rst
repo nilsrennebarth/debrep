@@ -7,7 +7,7 @@ The software is currently in a pre-alpha stage. Adding packages
 works, with the full syntax described in the manpage. Index
 files are generated/updated and Release files updated and signed.
 
-Nothing else is implemented yetm and very few checks, in particular
+Nothing else is implemented yet and very few checks, in particular
 for the configuration are done. *You have been warned*.
 
 Features
