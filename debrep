@@ -84,35 +84,35 @@ def addBinary(path, db, store, component, release):
 
 def argParser():
 	# common parser
-	com = argparse.ArgumentParser()
-	subparsers = com.add_subparsers(
-		title='actions', description='debrep allows the following actions',
-		help='where is this?')
-	# action add
-	add = subparsers.add_parser('add')
-	add.add_argument('debs', nargs='+')
-	add.set_defaults(impl=doAdd)
-	# action del
-	delete = subparsers.add_parser('del', aliases='rm')
-	delete.add_argument('names', nargs='+')
-	delete.set_defaults(impl=doDel)
-	# action list
-	list = subparsers.add_parser('list', aliases='ls')
-	list.add_argument('-f', '--format')
-	list.add_argument('names', nargs= '*')
-	list.set_defaults(impl=doList)
-	# action move
-	move = subparsers.add_parser('move', aliases='mv')
-	move.add_argument('--tc')
-	move.add_argument('--tr')
-	move.add_argument('names', nargs='+')
-	move.set_defaults(impl=doMove)
+	com = argparse.ArgumentParser(add_help=False)
 	# common options
 	com.add_argument('-C', '--component')
 	com.add_argument('-R', '--release')
 	com.add_argument('-A', '--architecture')
 	com.add_argument('-c', '--config')
-	return com
+
+	parser = argparse.ArgumentParser()
+	subparsers = parser.add_subparsers()
+	# action add
+	add = subparsers.add_parser('add', parents=[com])
+	add.add_argument('debs', nargs='+')
+	add.set_defaults(impl=doAdd)
+	# action del
+	delete = subparsers.add_parser('del', aliases=['rm'], parents=[com])
+	delete.add_argument('names', nargs='+')
+	delete.set_defaults(impl=doDel)
+	# action list
+	list = subparsers.add_parser('list', aliases=['ls'], parents=[com])
+	list.add_argument('-f', '--format')
+	list.add_argument('names', nargs= '*')
+	list.set_defaults(impl=doList)
+	# action move
+	move = subparsers.add_parser('move', aliases=['mv'], parents=[com])
+	move.add_argument('--tc')
+	move.add_argument('--tr')
+	move.add_argument('names', nargs='+')
+	move.set_defaults(impl=doMove)
+	return parser
 
 def updateReleases():
 	# set time locale to C so strftime outputs proper week names
