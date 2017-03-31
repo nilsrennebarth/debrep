@@ -1,4 +1,4 @@
-import collections, importlib, logging, os, types, yaml
+import collections, fnmatch, importlib, logging, os, types, yaml
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,7 @@ _top_options = {
 	'dbtype': 'sqlite',
 	'defarchitectures': set(['all', 'amd64', 'i386']),
 	'defcomponents': [ 'main' ],
+	'defcomponentrules': None,
 	'defrelease': None,
 	'defgpgkey': None,
 	'store': 'pool',
@@ -27,6 +28,7 @@ _release_options = {
 	'origin': None,
 	'description': None,
 	'components': None,
+	'componentrules': None,
 	'architectures': None,
 	'readonly': False,
 	'gpgkey': None
@@ -138,6 +140,22 @@ class Config(types.SimpleNamespace):
 			raise ConfigError("Unknown store '{}'".format(self.store))
 		store = importlib.import_module('store.' + self.store)
 		return store.Store(self)
+
+	def getPkgComponent(self, name, release):
+		"""Get configured component of a package
+
+		The configuration can specify release specific or global rules to
+		automatically place a package in a certain component. This method
+		implements the rules.
+		"""
+		fallback = release.components[0]
+		rules = release.componentrules \
+			or self.defcomponentrules
+		if rules is None: return fallback
+		for rule in rules:
+			for pattern in rule['packages']:
+				if fnmatch(name, pattern): return rule['component']
+		return fallback
 
 class Release(types.SimpleNamespace):
 	'''

@@ -72,22 +72,13 @@ The following options are common to all subcommands:
 
 Add packages
 ------------
-Packages are added with the *add* subcommand. It is followed by one or
-more files that must be debian packages. Between these, assignments of the
-form
-
-  R=`release`
-
-and
-
-  S=`component`
-
-can be added and will set the target release or target component respectively
-for all packages that follow. Adding a package which is already present in
-the archive (determined by its SHA256 checksum) will not copy the file but
+Packages are added with the *add* subcommand. It is followed by one or more
+files that must be debian packages.  Adding a package which is already present
+in the archive (determined by its SHA256 checksum) will not copy the file but
 simply create another reference to it. Adding a package to a release that
-already contains a package of the same name will replace the previous
-package.
+already contains a package of the same name and architecture will replace the
+previous package. In that case, the component of the package will be the new
+one if they differ.
 
 Delete packages
 ---------------

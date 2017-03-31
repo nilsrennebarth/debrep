@@ -243,7 +243,9 @@ Configuration items
 -------------------
 For a release
 
-- Description, Label, Version, Suite, Codename
+- Codename (-> name), Description, Label, Version, Suite
+- read only, components, architectures, gpgkey
+- component rules
 
 For the repository
 
@@ -307,6 +309,18 @@ A release is a mapping with keys
   components
     sequence of strings. First one is the default for package
     operations
+  componentrules
+    sequence of mappings, each with two keys:
+
+    packages
+      list of glob patterns
+    component
+      name of component
+
+    The list is processed in order. When a package name matches
+    (via shell globs) one of the items in the list, the package
+    will be added to the corresponding component during add.
+
   architectures
     Set of strings. It is an error to add a binary package with an
     architecture not mentioned. Optional if defarchitectures is given.

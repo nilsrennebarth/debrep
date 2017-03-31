@@ -14,19 +14,18 @@ class ArgError(Exception):
 		return self._msg
 
 
-def addBinary(path, db, store, component, release):
+def addBinary(pkg, db, store, component, release):
 
 	def searchContent(refs, checksum):
 		for ref in refs:
 			if ref.SHA256 == checksum: return ref.id
 		return -1
 
-	pkg = package.getBinFromDeb(path)
 	logger.debug('Got package %s', str(pkg))
 	logger.debug('Add package to %s/%s', release.name, component)
 	if pkg.Architecture not in release.architectures:
 		print("Ignore '%s', architecture %s not in release %s"
-			% (path, pkg.Architecture, release.name), file=sys.stderr)
+			  % (pkt.origfile, pkg.Architecture, release.name), file=sys.stderr)
 		return
 	refs = db.getrefsAdd(pkg, release.id)
 	id = searchContent(refs, pkg.SHA256)
@@ -133,7 +132,7 @@ def getRelease(relname):
 def doAdd(args):
 	index.cacheInit(config)
 	# determine initial release
-	if args.release != None:
+	if args.release is not None:
 		release = getRelease(args.release)
 	else:
 		release = config.defrelease
@@ -145,24 +144,12 @@ def doAdd(args):
 			raise ArgError("Unknown component '%s' in release %s"
 				% (comp, release.name))
 	else:
-		comp = release.components[0]
+		# component may be determined by componentrules
+		comp = None
 	for fname in args.debs:
-		if fname.startswith('R='):
-			try:
-				release = getRelease(fname[2:])
-			except ArgError:
-				print("Unknown release '%s', ignoring all further packages"
-					  % fname[2:], file=sys.stderr)
-				break
-			continue
-		if fname.startswith('C='):
-			if fname[2:] not in release.components:
-				print("Unknown component '%s' in release %s, ignoring all "
-					"further packages" % (fname[2:], release.name))
-				break
-			comp = fname[2:]
-			continue
-		addBinary(fname, db, store, comp, release)
+		pkg = package.getBinFromDeb(fname)
+		comp = comp or config.getPkgComponent(pkg.name, release)
+		addBinary(pkg, db, store, comp, release)
 	updateReleases()
 
 
