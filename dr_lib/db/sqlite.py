@@ -3,7 +3,10 @@
 Debrep module implementing sqlite3 as db backend
 """
 
-import logging, sqlite3
+import collections
+import logging
+import sqlite3
+
 
 from debian.deb822 import Deb822
 from package import BinPkgRef
@@ -282,10 +285,11 @@ class Db:
 			r = self.dbc.fetchone()
 			if r is None: return
 			# make a dict from the query in the usual way
-			p = dict(zip(r.keys(), r))
+			p = collections.defaultdict(lambda: '', zip(r.keys(), r))
 			# update with keys from control file
 			p.update(Deb822(p['control']))
 			del p['control']
+			p['shortdesc'] = (p['Description'].partition('\n'))[0]
 			yield p
 
 	def addBinaryRef(self, id, component, idrel):
