@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-'''
+"""
 Debrep module implementing sqlite3 as db backend
-'''
+"""
 
 import logging, sqlite3
 
@@ -20,7 +20,7 @@ class Db:
 	version = 1
 
 	_tables = [
-		'''CREATE TABLE binpackages (
+		"""CREATE TABLE binpackages (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT,
 		control TEXT,
@@ -33,10 +33,10 @@ class Db:
 		SHA1 TEXT,
 		SHA256 TEXT,
 		Description_md5 TEXT
-		)''',
-		'''CREATE INDEX bpname ON binpackages (name, Architecture)
-		''',
-		'''CREATE TABLE srcpackages (
+		)""",
+		"""CREATE INDEX bpname ON binpackages (name, Architecture)
+		""",
+		"""CREATE TABLE srcpackages (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT,
 		dsc TEXT,
@@ -44,29 +44,29 @@ class Db:
 		Priority TEXT,
 		Section TEXT
 		)
-		''',
-		'''CREATE TABLE releases (
+		""",
+		"""CREATE TABLE releases (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		Codename TEXT
-		)''',
-		'''CREATE UNIQUE INDEX relcodename ON releases (Codename)''',
-		'''CREATE TABLE release_bin (
+		)""",
+		"""CREATE UNIQUE INDEX relcodename ON releases (Codename)""",
+		"""CREATE TABLE release_bin (
 		idrel INTEGER,
 		component TEXT,
 		idpkg INTEGER,
 		PRIMARY KEY (idrel, idpkg)
-		)''',
-		'''CREATE INDEX rbpr ON release_bin (idpkg, idrel)
-		''',
-		'''CREATE TABLE release_src (
+		)""",
+		"""CREATE INDEX rbpr ON release_bin (idpkg, idrel)
+		""",
+		"""CREATE TABLE release_src (
 		idrel INTEGER,
 		component TEXT,
 		idsrc INTEGER,
 		PRIMARY KEY (idrel, idsrc)
-		)''',
-		'''CREATE TABLE dbschema (
+		)""",
+		"""CREATE TABLE dbschema (
 		version INTEGER
-		)'''
+		)"""
 	]
 
 	def mktables(self):
@@ -77,7 +77,7 @@ class Db:
 		self.db.commit()
 
 	def syncreleases(self, releases):
-		'''
+		"""
 		Synchronize releases with those enumerated in the config
 
 		If a release mentioned in the config exists, its id is set to the
@@ -85,7 +85,7 @@ class Db:
 		in the db, it is created and its id set to the newly created one.
 		If a release is in the db but not in the config, we will generate
 		a warning, but leave it to the user to actually delete it.
-		'''
+		"""
 		# First get all releases from the database and set id in config
 		self.dbc.execute('SELECT id,Codename FROM releases')
 		for row in self.dbc.fetchall():
@@ -100,17 +100,17 @@ class Db:
 		for release in releases.values():
 			if hasattr(release, 'id'): continue
 			self.dbc.execute(
-				'''INSERT INTO releases (Codename) VALUES (?)''',
+				"""INSERT INTO releases (Codename) VALUES (?)""",
 				(release.name,)
 			)
 			release.id = self.dbc.lastrowid
 
 	def initdb(self):
-		'''
+		"""
 		Make database ready for queries. If none of our tables
 		exist, create them. Otherwise get the version and eventually
 		update it to the current one.
-		'''
+		"""
 		# query sqlite if table 'dbschema' exists
 		self.dbc.execute("SELECT name FROM sqlite_master "
 			"WHERE type='table' AND name='dbschema'")
@@ -130,58 +130,58 @@ class Db:
 		self.syncreleases(config.releases)
 
 	def newBinary(self, pkg):
-		'''
+		"""
 		Create a new entry for a binary package
 
 		This is the low-level method that justs creates an
 		entry, without performing any checks.
-		'''
-		sql = '''INSERT INTO binpackages (
+		"""
+		sql = """INSERT INTO binpackages (
 			name, control, Version, Architecture, udeb, Filename,
 			Size, MD5Sum, SHA1, SHA256, Description_md5)
 		VALUES (
 			:name, :control, :Version, :Architecture, :udeb, :Filename,
 			:Size, :MD5Sum, :SHA1, :SHA256, :Description_md5)
-		'''
+		"""
 		self.dbc.execute(sql, pkg.__dict__);
 		pkg.id = self.dbc.lastrowid
 		logger.info("New binary package %s_%s_%s with id %d",
 			pkg.name, pkg.Version, pkg.Architecture, pkg.id)
 
 	def replaceBinary(self, pkg):
-		'''
+		"""
 		Replace entry for a binary package with new data
 
 		This again is just the low-level method without checks
-		'''
-		sql = '''UPDATE binpackages
+		"""
+		sql = """UPDATE binpackages
 		SET name=:name, control=:control, Version=:Version, Filename=:Filename,
 			Architecture=:Architecture, Size=:Size, MD5Sum=:MD5Sum,
 			SHA1=:SHA1, SHA256=:SHA256, Description_md5=:Description_md5
 		WHERE id=:id
-		'''
+		"""
 		self.dbc.execute(sql, pkg.__dict__);
 		logger.info("Replace binary package %s_%s with version %s",
 			pkg.name, pkg.Architecture, pkg.Version)
 
 	def getBinary(self, pkgid):
-		'''
+		"""
 		Get a binary package from the database as a dictionary
-		'''
+		"""
 		self.dbc.execute('SELECT * FROM binpackages WHERE id=?', (pkgid,))
 		r = self.dbc.fetchone()
 		return dict(zip(r.keys(), r))
 
 	def relName(self, id):
-		'''
+		"""
 		Codename of a release given as id
-		'''
+		"""
 		c = self.db.cursor()
 		c.execute('SELECT Codename FROM releases WHERE id=?', (id,))
 		return (c.fetchone())[0]
 
 	def getrefsAdd(self, pkg, tid):
-		'''
+		"""
 		Get all references needed when adding a package.
 
 		Those references are:
@@ -192,15 +192,15 @@ class Db:
 
 		Returns a list of all references, starting with the one in the
 		target release if found there at all
-		'''
+		"""
 		self.dbc.execute(
-			'''SELECT id, r.idrel, r.component, name, Version, Architecture,
+			"""SELECT id, r.idrel, r.component, name, Version, Architecture,
 				Filename, SHA256
 			FROM binpackages p
 			JOIN release_bin r ON p.id = r.idpkg
 			WHERE p.name=:name AND p.Architecture=:arch
 			AND (r.idrel=:tid OR p.Version=:version)
-			''', dict(name=pkg.name, arch=pkg.Architecture,
+			""", dict(name=pkg.name, arch=pkg.Architecture,
 				tid=tid, version=pkg.Version))
 		result = []
 		rels = set()
@@ -220,13 +220,18 @@ class Db:
 		return result
 
 	def getIndex(self, arch, component, idrel, with_all=False):
-		sql = '''SELECT b.*
+		"""
+		Return an iterator over all packages in an arch,comp,release
+		triple. A package is returned as a dict where the keys are the
+		column names of the binpackages table.
+		"""
+		sql = """SELECT b.*
 			FROM release_bin r
 			JOIN binpackages b ON r.idpkg=b.id
 			WHERE r.idrel=? AND r.component=?
 				AND b.Architecture {}
 			ORDER BY b.name
-			'''.format("IN ('all', ?)" if with_all else "= ?")
+			""".format("IN ('all', ?)" if with_all else "= ?")
 		self.dbc.execute(sql, (idrel, component, arch))
 		while True:
 			r = self.dbc.fetchone()
@@ -235,14 +240,15 @@ class Db:
 
 	def addBinaryRef(self, id, component, idrel):
 		self.dbc.execute(
-			'''INSERT OR IGNORE INTO release_bin (idrel, component, idpkg)
-			VALUES (?, ?, ?)''', (idrel, component, id))
+			"""INSERT OR IGNORE INTO release_bin (idrel, component, idpkg)
+			VALUES (?, ?, ?)""", (idrel, component, id))
 
 	def delBinaryRef(self, id, idrel):
 		self.dbc.execute(
 			'DELETE FROM release_bin WHERE idrel=? AND idpkg=?',
 			(idrel, id))
 
+	def listPackages(self, globs
 	def close(self):
 		self.dbc.close()
 		self.db.commit()

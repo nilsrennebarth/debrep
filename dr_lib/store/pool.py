@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-'''
+"""
 Package pool implementation of a repo file store
-'''
+"""
 import logging, os, os.path, shutil
 
 logger = logging.getLogger(__name__)
 
 def pure_version(v):
-	'''Version without the epoch'''
+	"""Version without the epoch"""
 	(epoch, sep, version) = v.partition(':')
 	return v if sep == '' else version
 
@@ -29,9 +29,9 @@ class Store:
 			return os.path.join('pool', component, base[0], base)
 
 	def addBinary(self, pkg, component, release):
-		'''
+		"""
 		Add a new binary package to the store
-		'''
+		"""
 		reldir  = self.pkgDir(pkg, component, release)
 		relname = os.path.join(reldir, self.pkgName(pkg))
 		# create directory

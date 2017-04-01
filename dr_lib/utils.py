@@ -5,9 +5,9 @@ debrep utilities
 import collections, hashlib
 
 def sum():
-	'''
+	"""
 	A new hash function that simply computes the size
-	'''
+	"""
 	class summer():
 		def __init__(self):
 			self.sum = 0
@@ -26,9 +26,9 @@ class Hashes(collections.namedtuple('Hashes', 'Size MD5Sum SHA1 SHA256')):
 			+ '\n)'
 
 class Hasher:
-	'''
+	"""
 	Compute various hashes and the size in parallel
-	'''
+	"""
 	def __init__(self):
 		self.dgst = (sum(), hashlib.md5(), hashlib.sha1(), hashlib.sha256())
 

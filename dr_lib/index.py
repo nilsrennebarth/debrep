@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-'''
+"""
 Create an index file from an iterator that yields packages
-'''
+"""
 
 import collections, datetime, logging, os, os.path, subprocess, types
 import bz2, lzma, zlib
@@ -64,11 +64,11 @@ class BinIndexer:
 		self.reldir  = os.path.join(component, 'binary-'+arch)
 
 	def create(self, iter):
-		'''
+		"""
 		Create the index files and return a list
 
 		Each list entry is a tuple with filename and its hashes
-		'''
+		"""
 
 		def writepkg(pkg, f):
 			f.write(pkg['control']
@@ -90,9 +90,9 @@ class BinIndexer:
 		return cc.close()
 
 def _updateRelease(release, db, root):
-	'''
+	"""
 	Update the (changed) indices then create and sign the Release file
-	'''
+	"""
 	csums = dict(MD5Sum=[], SHA1=[], SHA256=[])
 	for comp in release.components:
 		for arch in release.architectures:
@@ -153,9 +153,9 @@ def updateRelease(release, db, config):
 CompArch = collections.namedtuple('CompArch', 'comp arch')
 
 class ReleaseCache(types.SimpleNamespace):
-	'''
+	"""
 	Cache index checksums for a release
-	'''
+	"""
 
 	def __init__(self, release):
 		self.dirty = False
@@ -175,9 +175,9 @@ class ReleaseCache(types.SimpleNamespace):
 		self.cacaches[CompArch(comp, arch)].dirty = True
 
 class CompArchCache(types.SimpleNamespace):
-	'''
+	"""
 	Cache index checksums for a CompArch pair
-	'''
+	"""
 
 	def __init__(self):
 		self.dirty = False

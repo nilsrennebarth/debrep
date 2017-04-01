@@ -31,9 +31,9 @@ class PkgError(Exception):
 
 
 class BinPackage (types.SimpleNamespace):
-	'''
+	"""
 	Base class for binary packages
-	'''
+	"""
 	def __str__(self):
 		keys = (
 			'name', 'Version', 'Architecture', 'shortdesc',
@@ -49,16 +49,16 @@ class BinPackage (types.SimpleNamespace):
 
 
 class BinPackageDeb(BinPackage):
-	'''
+	"""
 	A binary package derived from a .deb file
-	'''
+	"""
 	def __str__(self):
 		return super().__str__() + '\norigfile: ' + self.origfile
 
 def getBinFromDeb(fname):
-	'''
+	"""
 	Get a binary package from a .deb file
-	'''
+	"""
 	dfile = DebFile(fname)
 	cdict = dfile.debcontrol()
 	result = BinPackageDeb(
@@ -79,17 +79,17 @@ def getBinFromDeb(fname):
 
 
 class BinPackageDb(BinPackage):
-	'''
+	"""
 	A binary package obtained from a database
-	'''
+	"""
 	def __str__(self):
 		return super().__str__() + '\nid: ' + str(self.id) \
 			+ '\nFilename: ' + self.Filename
 
 def getBinFromDb(db, pckid):
-	'''
+	"""
 	Get a binary package from a database
-	'''
+	"""
 	pdict = db.getbinary(pckid)
 	pdict['cdict'] = Deb822(pdict['control'])
 	return BinPackageDb(**pdict)

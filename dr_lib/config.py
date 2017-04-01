@@ -158,7 +158,7 @@ class Config(types.SimpleNamespace):
 		return fallback
 
 class Release(types.SimpleNamespace):
-	'''
+	"""
 	Configuration for a relase in repository
-	'''
+	"""
 	pass
