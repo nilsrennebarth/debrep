@@ -279,7 +279,7 @@ class Db:
 			sqlparams += name
 		if len(cond) > 0:
 			sql += " WHERE " + " AND ".join(cond)
-		sql += " ORDER BY rel.Codename, r.component, b.Architecture, b.name"
+		sql += " ORDER BY rel.Codename, r.component, b.name, b.Architecture"
 		self.dbc.execute(sql, sqlparams)
 		while True:
 			r = self.dbc.fetchone()

@@ -22,7 +22,9 @@ class Store:
 
 	def pkgDir(self, pkg, component, release):
 		base = pkg.name
-		if 'Source' in pkg.cdict: base = pkg.cdict['Source']
+		if 'Source' in pkg.cdict:
+			base = pkg.cdict['Source']
+			base = base.partition('(')[0].rstrip()
 		if base.startswith('lib'):
 			return os.path.join('pool', component, 'lib' + base[3], base)
 		else:
