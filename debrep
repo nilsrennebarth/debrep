@@ -83,7 +83,7 @@ def addBinary(pkg, db, store, component, release):
 
 
 # The default format of the list subcommand
-_defaultListFmt = r"{release}/{component} {Package} {Version}\n"
+_defaultListFmt = r"{release}/{component} {Package} {Version} {Architecture}\n"
 
 def argParser():
 	# common parser
