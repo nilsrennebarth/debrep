@@ -2,7 +2,10 @@
 """
 debrep utilities
 """
-import collections, hashlib
+import codecs
+import collections
+import hashlib
+import re
 
 def sum():
 	"""
@@ -48,6 +51,35 @@ class Hasher:
 				if len(buf) == 0: break
 				h.update(buf)
 		return h.digest()
+
+
+_ESCAPE_SEQUENCE_RE = re.compile(r'''
+    ( \\U........      # 8-digit hex escapes
+    | \\u....          # 4-digit hex escapes
+    | \\x..            # 2-digit hex escapes
+    | \\[0-7]{1,3}     # Octal escapes
+    | \\N\{[^}]+\}     # Unicode characters by name
+    | \\[\\'"abfnrtv]  # Single-character escapes
+    )''', re.UNICODE | re.VERBOSE)
+
+def decodeEscapes(s):
+	"""
+	Decode escape sequences in a string, i.e. do something similar
+	to what the python literal parser does: \n to LF, \t to TAB ...
+
+	Taken from http://stackoverflow.com/questions/
+	4020539/process-escape-sequences-in-a-string-in-python
+
+	The problem is, that unicode_escape will convert to latin1,
+	so we must make sure to only apply it where necessary, and
+	that are all matches of the escape sequences we wish to
+	convert.
+	"""
+	def decodeMatch(match):
+		return codecs.decode(match.group(0), 'unicode-escape')
+
+	return _ESCAPE_SEQUENCE_RE.sub(decodeMatch, s)
+
 
 
 if __name__ == '__main__':

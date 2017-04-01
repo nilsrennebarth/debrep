@@ -5,7 +5,7 @@ Maintain a repository of debian packages
 
 import argparse, locale, logging, sys
 
-from dr_lib import config, index, package
+from dr_lib import config, index, package, utils
 
 class ArgError(Exception):
 	def __init__(self,msg):
@@ -82,6 +82,9 @@ def addBinary(pkg, db, store, component, release):
 	index.cacheDirty(release.name, component, pkg.Architecture)
 
 
+# The default format of the list subcommand
+_defaultListFmt = r"{release}/{component} {Package} {Version}\n"
+
 def argParser():
 	# common parser
 	com = argparse.ArgumentParser(add_help=False)
@@ -103,7 +106,7 @@ def argParser():
 	delete.set_defaults(impl=doDel)
 	# action list
 	list = subparsers.add_parser('list', aliases=['ls'], parents=[com])
-	list.add_argument('-f', '--format')
+	list.add_argument('-f', '--format', default=_defaultListFmt)
 	list.add_argument('names', nargs= '*')
 	list.set_defaults(impl=doList)
 	# action move
@@ -157,7 +160,16 @@ def doDel(args):
 	print("Del not implemented", file=sys.stderr)
 
 def doList(args):
-	print("List not implemented", file=sys.stderr)
+	def str2list(s):
+		if s is None: return []
+		return s.split(',')
+
+	arch = str2list(args.architecture)
+	component = str2list(args.component)
+	relid = [getRelease(x) for x in str2list(args.release)]
+	fmt = utils.decodeEscapes(args.format)
+	for p in db.listBin(arch, component, relid, args.names):
+		print(fmt.format_map(p),end='')
 
 def doMove(args):
 	print("Move not implemented", file=sys.stderr)

@@ -5,6 +5,7 @@ Debrep module implementing sqlite3 as db backend
 
 import logging, sqlite3
 
+from debian.deb822 import Deb822
 from package import BinPkgRef
 
 logger = logging.getLogger(__name__)
@@ -235,8 +236,56 @@ class Db:
 		self.dbc.execute(sql, (idrel, component, arch))
 		while True:
 			r = self.dbc.fetchone()
-			if r == None: return
+			if r is None: return
 			yield dict(zip(r.keys(), r))
+
+	def condParaAdd(self, conds, paras, colname, v):
+		"""Append condition and parameters depending on type of v
+		"""
+		if len(v) == 0:
+			return
+		elif len(v) == 1:
+			conds.append(colname+"=?")
+			paras.append(v)
+			return
+		else:
+			conds.append(conlname+" IN (?"+ ",?" * (len(v)-1) + ")")
+			paras += v
+
+	def listBin(self, arch, component, idrel, name):
+		"""
+		Return an iterator over packages.
+		arch, component and relese can all be either None, meaning
+		no restriction, a string or number (in case of idrel),
+		or an iterable.
+		"""
+		sql = """SELECT b.*,rel.Codename AS release, r.component
+		FROM release_bin r
+		JOIN binpackages b on r.idpkg=b.id
+		JOIN releases rel on r.idrel = rel.id
+		"""
+		sqlparams = [];
+		cond = [];
+		self.condParaAdd(cond, sqlparams, "b.Architecture", arch)
+		self.condParaAdd(cond, sqlparams, "r.component", component)
+		self.condParaAdd(cond, sqlparams, "r.idrel", idrel)
+		if len(name) > 0:
+			globs = " OR ".join(map(lambda x: "b.name GLOB "+x, name))
+			cond.append("(" + globs + ")")
+			sqlparams += name
+		if len(cond) > 0:
+			sql += " WHERE " + " AND ".join(cond)
+		sql += " ORDER BY rel.Codename, r.component, b.Architecture, b.name"
+		self.dbc.execute(sql, sqlparams)
+		while True:
+			r = self.dbc.fetchone()
+			if r is None: return
+			# make a dict from the query in the usual way
+			p = dict(zip(r.keys(), r))
+			# update with keys from control file
+			p.update(Deb822(p['control']))
+			del p['control']
+			yield p
 
 	def addBinaryRef(self, id, component, idrel):
 		self.dbc.execute(
@@ -248,7 +297,6 @@ class Db:
 			'DELETE FROM release_bin WHERE idrel=? AND idpkg=?',
 			(idrel, id))
 
-	def listPackages(self, globs
 	def close(self):
 		self.dbc.close()
 		self.db.commit()
