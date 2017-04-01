@@ -3,12 +3,14 @@ debrep
 ======
 A tool to create and maintain signed debian package repositories.
 
-The software is currently in a pre-alpha stage. Adding packages
-works, with the full syntax described in the manpage. Index
-files are generated/updated and Release files updated and signed.
+The software is currently in a pre-alpha stage. Adding (binary) packages
+works, with all options mentioned in the manpage.
+Files are generated/updated and Release files updated and signed.
+Listing packages works as well.
 
-Nothing else is implemented yet and very few checks, in particular
-for the configuration are done. *You have been warned*.
+Deletion, moving and source packages are not supported yet,
+Very few checks, in particular for the configuration are done.
+
 
 Features
 ========

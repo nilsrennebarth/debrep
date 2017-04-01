@@ -104,12 +104,27 @@ It takes the following options:
   In addition to standard debian control fields, the following
   can be used as well:
 
-  Component
+  component
     the component the package is in
-  Release
+  release
     the codename of the release
   Filename
     the filename relative the the repository root directory
+
+  Actually, the template is directly used as a python format string,
+  so by using e.g. ``{Package:20}`` the package name will always be
+  at least 20 characters wide and left aligned inside that width.
+  If the number is preceded by ``>`` the package name will be right
+  aligned. With ``=`` it will be centered instead.
+
+  The usual backslash escape sequences, i.e. \\a, \\b. \\f. \\n, \\r,
+  \\t and \\v insert the ascii control characters  BEL, BS, FF, LF,
+  CR, TAB, VT resp.
+
+  Furthermore, \\xhh with
+  hh being exactly two hex digits will insert a character with
+  the given hex value. \\uhhhh with 4 hex digits inserts the
+  unicode 16 bit codepoint etc.
 
  -p, --pattern <pattern>
   List packages matching the given patterns. Shell globbing syntax
@@ -144,8 +159,7 @@ error message is generated.
 EXAMPLES
 ========
 
-:debrep add -R stable foo.deb C=contrib bar.deb:
-   Add foo.deb to the default component of the stable release, and
-   bar.deb to the contrib component of the stable relase
+:debrep add foo.deb
+   Add foo.deb and bar.deb to the default release, default component.
 
 Project Homepage at https://github.com/nilsrennebarth/debrep
