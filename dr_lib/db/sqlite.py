@@ -244,13 +244,11 @@ class Db:
 		"""
 		if len(v) == 0:
 			return
-		elif len(v) == 1:
+		if len(v) == 1:
 			conds.append(colname+"=?")
-			paras.append(v)
-			return
 		else:
-			conds.append(conlname+" IN (?"+ ",?" * (len(v)-1) + ")")
-			paras += v
+			conds.append(colname+" IN (?"+ ",?" * (len(v)-1) + ")")
+		paras += v
 
 	def listBin(self, arch, component, idrel, name):
 		"""
@@ -269,9 +267,12 @@ class Db:
 		self.condParaAdd(cond, sqlparams, "b.Architecture", arch)
 		self.condParaAdd(cond, sqlparams, "r.component", component)
 		self.condParaAdd(cond, sqlparams, "r.idrel", idrel)
-		if len(name) > 0:
-			globs = " OR ".join(map(lambda x: "b.name GLOB "+x, name))
-			cond.append("(" + globs + ")")
+		if len(name) == 1:
+			cond.append("b.name GLOB ?")
+			sqlparams += name
+		elif len(name) > 1:
+			c = "(b.name GLOB ? " + " OR b.name GLOB ?" * (len(name)-1) + ")"
+			cond.append(c)
 			sqlparams += name
 		if len(cond) > 0:
 			sql += " WHERE " + " AND ".join(cond)
