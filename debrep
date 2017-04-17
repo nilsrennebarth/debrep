@@ -126,29 +126,40 @@ def updateReleases():
 		if index.cacheRelIsDirty(release.name):
 			index.updateRelease(release, db, config)
 
-def getRelease(relname):
-	if relname in config.releases:
-		return config.releases[relname]
-	else:
-		raise ArgError("Unknown release '%s'" % relname)
+def relidsFromArgs(rarg, noneIsEmpty=False):
+	if rarg is None:
+		return [] if noneIsEmpty else [config.defrelease.id]
+	result = []
+	for r in rarg.split(','):
+		if r not in config.releases:
+			raise ArgError("Unknown release '%s'" % r)
+		result.append(config.releases[r].id)
+	return result
+
+def arg2list(s):
+	"""Create list from argument
+
+	Split the argument at commas. I argument is None
+	create an empty list instead.
+	"""
+	if s is None: return []
+	return s.split(',')
 
 def doAdd(args):
 	index.cacheInit(config)
-	# determine initial release
-	if args.release is not None:
-		release = getRelease(args.release)
-	else:
+	# determine release
+	if args.release is None:
 		release = config.defrelease
-	logger.debug("Add package to release %s" % release)
-	# determine initial component
-	if args.component != None:
-		comp = args.component
-		if comp not in release.components:
-			raise ArgError("Unknown component '%s' in release %s"
-				% (comp, release.name))
+	elif args.release in config.releases:
+		release = config.releases[args.release]
 	else:
-		# component may be determined by componentrules
-		comp = None
+		raise ArgError("Unknown release '%s'" % args.release)
+	logger.debug("Add package to release %s" % release.name)
+	# determine component. None means it is determined by componentrules
+	comp = args.component
+	if comp and comp not in release.components:
+		raise ArgError("Unknown component '%s' in release %s"
+			% (comp, release.name))
 	for fname in args.debs:
 		pkg = package.getBinFromDeb(fname)
 		comp = comp or config.getPkgComponent(pkg.name, release)
@@ -157,18 +168,23 @@ def doAdd(args):
 
 
 def doDel(args):
-	print("Del not implemented", file=sys.stderr)
+	index.cacheInit(config)
+	arch = arg2list(args.architecture)
+	component = arg2list(args.component)
+	relids = relidsFromArgs(args.release, noneIsEmpty=False)
+	for pkgid in db.listIds(arch, component, relids, args.names):
+		for relid in relids:
+			refs = db.delBinary(pkgid, relid)
+			if len(refs) == 1 and refs[0].idrel is None:
+				store.delBinaryLastRef(refs[0].Filename)
+	updateReleases()
 
 def doList(args):
-	def str2list(s):
-		if s is None: return []
-		return s.split(',')
-
-	arch = str2list(args.architecture)
-	component = str2list(args.component)
-	relid = [getRelease(x) for x in str2list(args.release)]
+	arch = arg2list(args.architecture)
+	component = arg2list(args.component)
+	relids = relidsFromArgs(args.release, noneIsEmpty=True)
 	fmt = utils.decodeEscapes(args.format)
-	for p in db.listBin(arch, component, relid, args.names):
+	for p in db.listBin(arch, component, relids, args.names):
 		print(fmt.format_map(p),end='')
 
 def doMove(args):

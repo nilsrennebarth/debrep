@@ -19,6 +19,69 @@ class DbError(Exception):
 	def __str__(self):
 		return self._msg
 
+#
+# Query utility functions
+#
+
+def condParaAdd(conds, paras, colname, v):
+	"""Append condition and parameters depending on length of v
+	"""
+	if len(v) == 0:
+		return
+	if len(v) == 1:
+		conds.append(colname+"=?")
+	else:
+		conds.append(colname+" IN (?"+ ",?" * (len(v)-1) + ")")
+	paras += v
+
+def condParaAddStr(conds, paras, colname, v):
+	"""
+	Append condition and parameters for String comparison with globs
+	"""
+	def hasGlobs(str):
+		"""Test if string contains globbing special characters"""
+		for i in "*?[]":
+			if i in str: return True
+		return False
+
+	def singleCond(str):
+		"""Create a single globbing or equal condition from a string"""
+		return colname + (' GLOB ?' if hasGlobs(str) else '=?')
+
+	if len(v) == 0:
+		return
+	paras += v
+	cond = ' OR '.join(map(singleCond, v))
+	if len(v) > 1:
+		cond = '(' + cond + ')'
+	conds.append(cond)
+
+def makeQuery(arch, component, idrel, name):
+	"""
+	Create a query from a standard set of properties
+
+	Given a list of architectures, components, realease ids
+	and name globs, create query fragments and a parameter
+	list. An empty list as usual means no restrictions on the
+	given prperty.
+
+	Return a tuple with the join fragment, the where fragment
+	and the query parameters
+	"""
+	sqlparams = [];
+	cond = [];
+	condParaAdd(cond, sqlparams, 'b.Architecture', arch)
+	condParaAdd(cond, sqlparams, 'r.component', component)
+	condParaAdd(cond, sqlparams, 'r.idrel', idrel)
+	condParaAddStr(cond, sqlparams, 'b.name', name)
+	sqlj = ' FROM binpackages b JOIN release_bin r on b.id=r.idpkg '
+	if len(cond) > 0:
+		sqlw = ' WHERE ' + ' AND '.join(cond)
+	else:
+		sqlw = ''
+	return sqlj, sqlw, sqlparams
+
+
 class Db:
 
 	version = 1
@@ -176,6 +239,41 @@ class Db:
 		r = self.dbc.fetchone()
 		return dict(zip(r.keys(), r))
 
+	def delBinary(self, pkgid, relid):
+		"""
+		Delete binary package from a release
+
+		This is a lowlevel method that only does a minimal amount of checking.
+		Return a list of references that stil point to the package,
+		or the data of the package that was just deleted.
+		"""
+		# delete the reference
+		self.dbc.execute(
+			"""DELETE FROM release_bin
+			WHERE idrel=? AND idpkg=?""", (relid, pkgid))
+		# Now get all remaining references to the package, if
+		# any exist, or a single row with just the essential package
+		# data if none exist.
+		self.dbc.execute(
+			"""SELECT p.id, r.idrel, r.component, p.name, p.Version,
+				p.Architecture, p.Filename, p.SHA256
+			FROM binpackages p
+			LEFT JOIN release_bin r ON p.id = r.idpkg
+			WHERE p.id=?""", (pkgid,))
+		result = []
+		for row in self.dbc.fetchall():
+			result.append(BinPkgRef(**dict(zip(row.keys(), row))))
+		# if that was the last reference to the package, we must
+		# delete it from binpackages as well
+		if len(result) == 0:
+			# Oops, no package with that id
+			logger.warning("While deleting package id %d: Not found", pkgid)
+		elif result[0].idrel is None:
+			logger.debug("Last reference to %s deleted. Remove %d",
+				result[0].name, result[0].id)
+			self.dbc.ecexute("DELETE from binpackages WHERE id=?", (pkgid,))
+		return result
+
 	def relName(self, id):
 		"""
 		Codename of a release given as id
@@ -242,16 +340,6 @@ class Db:
 			if r is None: return
 			yield dict(zip(r.keys(), r))
 
-	def condParaAdd(self, conds, paras, colname, v):
-		"""Append condition and parameters depending on type of v
-		"""
-		if len(v) == 0:
-			return
-		if len(v) == 1:
-			conds.append(colname+"=?")
-		else:
-			conds.append(colname+" IN (?"+ ",?" * (len(v)-1) + ")")
-		paras += v
 
 	def listBin(self, arch, component, idrel, name):
 		"""
@@ -260,26 +348,13 @@ class Db:
 		no restriction, a string or number (in case of idrel),
 		or an iterable.
 		"""
-		sql = """SELECT b.*,rel.Codename AS release, r.component
-		FROM release_bin r
-		JOIN binpackages b on r.idpkg=b.id
-		JOIN releases rel on r.idrel = rel.id
-		"""
-		sqlparams = [];
-		cond = [];
-		self.condParaAdd(cond, sqlparams, "b.Architecture", arch)
-		self.condParaAdd(cond, sqlparams, "r.component", component)
-		self.condParaAdd(cond, sqlparams, "r.idrel", idrel)
-		if len(name) == 1:
-			cond.append("b.name GLOB ?")
-			sqlparams += name
-		elif len(name) > 1:
-			c = "(b.name GLOB ? " + " OR b.name GLOB ?" * (len(name)-1) + ")"
-			cond.append(c)
-			sqlparams += name
-		if len(cond) > 0:
-			sql += " WHERE " + " AND ".join(cond)
-		sql += " ORDER BY rel.Codename, r.component, b.name, b.Architecture"
+		(sqlj, sqlw, sqlparams) = makeQuery(arch, component, idrel, name)
+		sql = 'SELECT b.*,rel.Codename AS release, r.component ' \
+			  + sqlj \
+			  + ' JOIN  releases rel on r.idrel = rel.id ' \
+			  + sqlw \
+			  + ' ORDER BY rel.Codename, r.component, b.name, b.Architecture'
+		logger.debug("Query for list = %s", sql)
 		self.dbc.execute(sql, sqlparams)
 		while True:
 			r = self.dbc.fetchone()
@@ -291,6 +366,24 @@ class Db:
 			del p['control']
 			p['shortdesc'] = (p['Description'].partition('\n'))[0]
 			yield p
+
+	def listIds(self, arch, component, idrel, name):
+		"""
+		List package ids for given properties
+
+		Again, properties are given as a list of arch, component, releaseids
+		and names, the latter might also be globs. An empty property means
+		no restriction, otherwise eeach list is ORed and all three
+		properties ANDed.
+
+		Return a list of package ids.
+		"""
+		(sqlj, sqlw, sqlparams) = makeQuery(arch, component, idrel, name)
+		sql = 'SELECT b.id ' \
+			  + sqlj \
+			  + sqlw
+		self.dbc.execute(sql, sqlparams)
+		return self.dbc.fetchall()
 
 	def addBinaryRef(self, id, component, idrel):
 		self.dbc.execute(
