@@ -10,7 +10,7 @@
 set -e
 
 MYKEY=Debrep
-MYREPO="http://localhost/~${USER}"
+MYREPO="http://localhost/~${USER}/repo"
 MYDIST=jessie
 
 MIRROR=ftp.uni-stuttgart.de/debian/
