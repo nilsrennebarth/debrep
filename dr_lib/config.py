@@ -130,16 +130,20 @@ class Config(types.SimpleNamespace):
 	Configuration for debrep
 	"""
 	def getDb(self):
+		if '_db' in self.__dict__: return self._db
 		if self.dbtype not in ('sqlite'):
 			raise ConfigError("Unknown dbtype '{}'".format(self.dbtype))
 		db = importlib.import_module('db.' + self.dbtype)
-		return db.Db(self)
+		self._db = db.Db(self)
+		return self._db
 
 	def getStore(self):
+		if '_store' in self.__dict__: return self._store
 		if self.store not in ('pool'):
 			raise ConfigError("Unknown store '{}'".format(self.store))
 		store = importlib.import_module('store.' + self.store)
-		return store.Store(self)
+		self._store = store.Store(self, self.getDb())
+		return self._store
 
 	def getPkgComponent(self, name, release):
 		"""Get configured component of a package

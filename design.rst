@@ -78,7 +78,6 @@ Existing software
 
 TODO
 ----
-- listings
 - when adding, check if given component exists in release, and if a
   package is to be replaced, check that the component is the same,
   or allow a --force-replace-component or similar
@@ -89,6 +88,10 @@ TODO
 - Move between components
 - allow wildcards for del and move
 - source Packages
+- Store Filename key in references to allow a different filename, based on
+  release and component:
+  - Store.addBinaryRef -> binAddRef, delBinaryRef
+- Implement symlink and hardlink stores with a release based root directory.
 - new db and store implementations:
 
   - check the used abstractions, tweak them a bit, use a base class to
@@ -373,14 +376,24 @@ releases.
 For other storage strategies, we can lift the restriction that the same
 version implies the same content and store a file under a release
 specific path. Sharing files with the same content accross releases
-can be done by using symlinks or hardlinks, but sharing can be switched
-off as well.
+can be done by using symlinks or hardlinks but it might also be left out
+altogether.
 
 Lowlevel ops:
-- Add new file to store
-- Add a new reference to an existing file
-- Remove a reference to a file
-- Remove the last reference to a file
+- Given a package, release, component and a file, add the file to the store
+  and return the Filename. The file does not have references
+  yet. (Note, that the general operation is to give a list of references which
+  might be empty, a file and a package. But either the file is new, then the
+  list of refs is empty, and may be omitted, or the file does exist already,
+  thus the file itself maybe omitted.)
+- Given a package, release, component and a list of existing references, add
+  the new reference to the store and return the Filename
+- Given a list of all references remove a certain reference. Reason for the
+  list is that e.g. the symlink store might want the 'real' file to be the
+  lowest one in an ordered list of references. That means that when looking at
+  files of a given release, the symlink points to the latest release that
+  package was changed.
+
 
 Index cache
 -----------

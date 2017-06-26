@@ -39,15 +39,19 @@ def addBinary(pkg, db, store, component, release):
 			return
 		logger.info("Package '%s' with given content already in repo. Reusing",
 			pkg.name)
-		store.addBinaryRef(pkg, component, release.name)
-		db.addBinaryRef(refs[0].id, component, release.id)
+		filename = store.binAddRef(pkg, component, release.name)
+		db.addBinaryRef(release.id, refs[0].id, component, filename)
 		index.cacheDirty(release.name, component, pkg.Architecture)
 		return
+	isNewPkg = True
 	# The given content is not present in the repo.
 	# Can we add it at all? TODO: check if strict and if same version
 	# already present in a release other than the target and refuse
 	# Ok, we can add the package now. Do we need to replace an existing
 	# package?
+	# TODO: make replacement optional (but default), thus allowing several
+	# versions of a package in a release. apt install will select the latest
+	# version (exept if version pinning is dons).
 	if len(refs) > 0 and refs[0].idrel == release.id:
 		logger.debug('Need to replace %s_%s ', pkg.name, pkg.Version)
 		# Yes, need to replace an existing package P_old
@@ -58,25 +62,25 @@ def addBinary(pkg, db, store, component, release):
 				pkg.name, pkg.Version, release.name)
 			# Yes it is, remove reference from target release.
 			# Package will get a new id by default
-			store.delBinaryRef(refs)
+			store.binDelRef(refs)
 			db.delBinaryRef(refs[0].id, release.id)
 		else:
 			logger.debug('Remove %s_%s from %s',
 				pkg.name, pkg.Version, release.name)
-			# Not it is not, remove it from store and recycle the
+			# No it is not, remove it from store and recycle the
 			# package id
-			store.delBinaryLastRef(refs[0])
+			store.binDelLastRef(refs[0])
 			pkg.id = refs[0].id
+			isNewPkg = False
 	# Now do an add or replace, depending on pkg.id
-	if pkg.id == -1:
-		store.addBinary(pkg, component, release.name)
+	filename = store.binNewPkg(pkg, component, release.name)
+	if isNewPkg:
 		db.newBinary(pkg)
-		db.addBinaryRef(pkg.id, component, release.id)
+		db.addBinaryRef(release.id, pkg.id, component, filename)
 		logger.info("Added package %s_%s to %s/%s with new id %d",
 			pkg.name, pkg.Version, release.name, component, pkg.id)
 	else:
-		store.addBinary(pkg, component, release.name)
-		db.replaceBinary(pkg)
+		db.replaceBinary(pkg, release.id, component, filename)
 		logger.info("Added package %s_%s to %s/%s under id %d",
 				pkg.name, pkg.Version, release.name, component, pkg.id)
 	index.cacheDirty(release.name, component, pkg.Architecture)
@@ -176,7 +180,7 @@ def doDel(args):
 		for relid in relids:
 			refs = db.delBinary(pkgid, relid)
 			if len(refs) == 1 and refs[0].idrel is None:
-				store.delBinaryLastRef(refs[0].Filename)
+				store.binDelLastRef(refs[0].Filename)
 	updateReleases()
 
 def doList(args):

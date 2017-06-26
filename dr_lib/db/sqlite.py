@@ -94,7 +94,6 @@ class Db:
 		Version TEXT,
 		Architecture TEXT,
 		udeb INTEGER,
-		Filename TEXT,
 		Size INTEGER,
 		MD5Sum TEXT,
 		SHA1 TEXT,
@@ -119,16 +118,18 @@ class Db:
 		"""CREATE UNIQUE INDEX relcodename ON releases (Codename)""",
 		"""CREATE TABLE release_bin (
 		idrel INTEGER,
-		component TEXT,
 		idpkg INTEGER,
+		component TEXT,
+		Filename TEXT,
 		PRIMARY KEY (idrel, idpkg)
 		)""",
 		"""CREATE INDEX rbpr ON release_bin (idpkg, idrel)
 		""",
 		"""CREATE TABLE release_src (
 		idrel INTEGER,
-		component TEXT,
 		idsrc INTEGER,
+		component TEXT,
+		Directory TEXT,
 		PRIMARY KEY (idrel, idsrc)
 		)""",
 		"""CREATE TABLE dbschema (
@@ -204,10 +205,10 @@ class Db:
 		entry, without performing any checks.
 		"""
 		sql = """INSERT INTO binpackages (
-			name, control, Version, Architecture, udeb, Filename,
+			name, control, Version, Architecture, udeb,
 			Size, MD5Sum, SHA1, SHA256, Description_md5)
 		VALUES (
-			:name, :control, :Version, :Architecture, :udeb, :Filename,
+			:name, :control, :Version, :Architecture, :udeb,
 			:Size, :MD5Sum, :SHA1, :SHA256, :Description_md5)
 		"""
 		self.dbc.execute(sql, pkg.__dict__);
@@ -215,19 +216,23 @@ class Db:
 		logger.info("New binary package %s_%s_%s with id %d",
 			pkg.name, pkg.Version, pkg.Architecture, pkg.id)
 
-	def replaceBinary(self, pkg):
+	def replaceBinary(self, pkg, idrel, component, filename):
 		"""
 		Replace entry for a binary package with new data
 
 		This again is just the low-level method without checks
 		"""
 		sql = """UPDATE binpackages
-		SET name=:name, control=:control, Version=:Version, Filename=:Filename,
+		SET name=:name, control=:control, Version=:Version,
 			Architecture=:Architecture, Size=:Size, MD5Sum=:MD5Sum,
 			SHA1=:SHA1, SHA256=:SHA256, Description_md5=:Description_md5
 		WHERE id=:id
 		"""
 		self.dbc.execute(sql, pkg.__dict__);
+		sql = """UPDATE release_bin SET Filename=?, component=?
+		WHERE idrel=? AND idpkg=?
+		"""
+		self.dbc.execute(sql, (filename, component, idrel, pkg.id))
 		logger.info("Replace binary package %s_%s with version %s",
 			pkg.name, pkg.Architecture, pkg.Version)
 
@@ -255,8 +260,8 @@ class Db:
 		# any exist, or a single row with just the essential package
 		# data if none exist.
 		self.dbc.execute(
-			"""SELECT p.id, r.idrel, r.component, p.name, p.Version,
-				p.Architecture, p.Filename, p.SHA256
+			"""SELECT p.id, r.idrel, r.component, r.Filename, p.name, p.Version,
+				p.Architecture, p.SHA256
 			FROM binpackages p
 			LEFT JOIN release_bin r ON p.id = r.idpkg
 			WHERE p.id=?""", (pkgid,))
@@ -296,8 +301,8 @@ class Db:
 		target release if found there at all
 		"""
 		self.dbc.execute(
-			"""SELECT id, r.idrel, r.component, name, Version, Architecture,
-				Filename, SHA256
+			"""SELECT id, r.idrel, r.component, r.Filename, name, Version,
+				Architecture, SHA256
 			FROM binpackages p
 			JOIN release_bin r ON p.id = r.idpkg
 			WHERE p.name=:name AND p.Architecture=:arch
@@ -310,6 +315,7 @@ class Db:
 			ref = BinPkgRef(**dict(zip(row.keys(), row)))
 			if ref.idrel in rels:
 				# must not happen
+				# TODO: or might happen, depending on option
 				raise DbError("Release %s contains several versions "
 					"of %s_%s", self.relName(ref.idrel), pkg.name,
 					pkg.Architecture)
@@ -327,7 +333,7 @@ class Db:
 		triple. A package is returned as a dict where the keys are the
 		column names of the binpackages table.
 		"""
-		sql = """SELECT b.*
+		sql = """SELECT b.*, r.Filename
 			FROM release_bin r
 			JOIN binpackages b ON r.idpkg=b.id
 			WHERE r.idrel=? AND r.component=?
@@ -349,7 +355,7 @@ class Db:
 		or an iterable.
 		"""
 		(sqlj, sqlw, sqlparams) = makeQuery(arch, component, idrel, name)
-		sql = 'SELECT b.*,rel.Codename AS release, r.component ' \
+		sql = 'SELECT b.*,rel.Codename AS release, r.component, r.Filename ' \
 			  + sqlj \
 			  + ' JOIN  releases rel on r.idrel = rel.id ' \
 			  + sqlw \
@@ -385,10 +391,11 @@ class Db:
 		self.dbc.execute(sql, sqlparams)
 		return self.dbc.fetchall()
 
-	def addBinaryRef(self, id, component, idrel):
+	def addBinaryRef(self, idrel, idpkg, component, filename):
 		self.dbc.execute(
-			"""INSERT OR IGNORE INTO release_bin (idrel, component, idpkg)
-			VALUES (?, ?, ?)""", (idrel, component, id))
+			"""INSERT OR IGNORE INTO release_bin
+			   (idrel, idpkg, component, Filename)
+			VALUES (?, ?, ?, ?)""", (idrel, idpkg, component, filename))
 
 	def delBinaryRef(self, id, idrel):
 		self.dbc.execute(

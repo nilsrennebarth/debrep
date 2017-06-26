@@ -21,6 +21,7 @@ if __name__ == '__main__':
 	import os, sys
 	sys.path.append(os.path.dirname(__file__))
 
+import os
 import utils
 
 class PkgError(Exception):
@@ -46,6 +47,27 @@ class BinPackage (types.SimpleNamespace):
 	def shortdesc(self):
 		return (self.cdict['Description'].partition('\n'))[0]
 
+	def sourceName(self):
+		"""The source name of a package
+
+		If the package has a "Source" key, it is the package's source
+		name (except for a possible version number of course). Otherwise
+		it is the package's name
+		"""
+		if 'Source' in self.cdict:
+			return self.cdict['Source'].partition('(')[0].rstrip()
+		else:
+			return self.name
+
+	def poolDir(self):
+		"""Directory containing the package in a debian package pool
+
+		These are just the last two directory components, i.e. the parth
+		that is release and component independent.
+		"""
+		base = self.sourceName()
+		prefixlen = 4 if base.startswith('lib') else 1
+		return os.path.join(base[0:prefixlen], base)
 
 
 class BinPackageDeb(BinPackage):
