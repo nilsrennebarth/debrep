@@ -166,8 +166,8 @@ def doAdd(args):
 			% (comp, release.name))
 	for fname in args.debs:
 		pkg = package.getBinFromDeb(fname)
-		comp = comp or config.getPkgComponent(pkg.name, release)
-		addBinary(pkg, db, store, comp, release)
+		c = comp or config.getPkgComponent(pkg.name, release)
+		addBinary(pkg, db, store, c, release)
 	updateReleases()
 
 
