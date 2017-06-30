@@ -143,7 +143,7 @@ def relidsFromArgs(rarg, noneIsEmpty=False):
 def arg2list(s):
 	"""Create list from argument
 
-	Split the argument at commas. I argument is None
+	Split the argument at commas. If argument is None
 	create an empty list instead.
 	"""
 	if s is None: return []
