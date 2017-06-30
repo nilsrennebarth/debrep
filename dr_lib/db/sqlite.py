@@ -196,38 +196,47 @@ class Db:
 		r = self.dbc.fetchone()
 		return dict(zip(r.keys(), r))
 
-	def delBinary(self, pkgid, relid):
+	def binGetRefs(self, pkgid):
 		"""
-		Delete binary package from a release
-
-		This is a lowlevel method that only does a minimal amount of checking.
-		Return a list of references that stil point to the package,
-		or the data of the package that was just deleted.
+		Get all references to a binary package
 		"""
-		# delete the reference
 		self.dbc.execute(
-			"""DELETE FROM release_bin
-			WHERE idrel=? AND idpkg=?""", (relid, pkgid))
-		# Now get all remaining references to the package, if
-		# any exist, or a single row with just the essential package
-		# data if none exist.
-		self.dbc.execute(
-			"""SELECT p.id, r.idrel, r.component, r.Filename, p.name, p.Version,
-				p.Architecture, p.SHA256
+			"""SELECT p.id, r.idrel, rl. Codename, r.component, r.Filename,
+				p.name, p.Version, p.Architecture, p.SHA256
 			FROM binpackages p
-			LEFT JOIN release_bin r ON p.id = r.idpkg
+			JOIN release_bin rf ON p.id = r.idpkg
+			JOIN releases rl ON r.idrel = rl.id
 			WHERE p.id=?""", (pkgid,))
 		result = []
 		for row in self.dbc.fetchall():
 			result.append(BinPkgRef(**dict(zip(row.keys(), row))))
-		# if that was the last reference to the package, we must
-		# delete it from binpackages as well
+		return result
+
+	def delBinary(self, pkgid, relid):
+		"""
+		Delete binary package from a release
+
+		Return a list of references that stil point to the package. If no such
+		references remain, return a reference to the package that just has been
+		deleted, with the release id 'relid' set to None, so the caller can
+		know it was deleted.
+		"""
+		# Before deleting the references, get it, otherwise the Filename
+		# and component from the reference is lost. Also get all other refs
+		# because the caller may need them.
+		result = self.binGetRefs(pkgid)
+		# delete the reference
+		self.dbc.execute(
+			"""DELETE FROM release_bin
+			WHERE idrel=? AND idpkg=?""", (relid, pkgid))
 		if len(result) == 0:
 			# Oops, no package with that id
 			logger.warning("While deleting package id %d: Not found", pkgid)
-		elif result[0].idrel is None:
+		elif len(result) == 1:
 			logger.debug("Last reference to %s deleted. Remove %d",
 				result[0].name, result[0].id)
+			# Mark the ref as deleted for the caller
+			result[0].relid = None
 			self.dbc.ecexute("DELETE from binpackages WHERE id=?", (pkgid,))
 		return result
 
@@ -241,7 +250,7 @@ class Db:
 
 	def getrefsAdd(self, pkg, tid):
 		"""
-		Get all references needed when adding a package.
+		Get all references needed when adding a package to a target release.
 
 		Those references are:
 		- a Package with the same name and arch in the target
@@ -265,12 +274,6 @@ class Db:
 		rels = set()
 		for row in self.dbc.fetchall():
 			ref = BinPkgRef(**dict(zip(row.keys(), row)))
-			if ref.idrel in rels:
-				# must not happen
-				# TODO: or might happen, depending on option
-				raise DbError("Release %s contains several versions "
-					"of %s_%s", self.relName(ref.idrel), pkg.name,
-					pkg.Architecture)
 			if ref.idrel == tid:
 				# Found in target release
 				result.insert(0, ref)
