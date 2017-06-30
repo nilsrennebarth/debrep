@@ -286,6 +286,9 @@ Toplevel is a Mapping with keys
     Optional, default is the first writeable release
   defarchitectures
     A set of architectures. Optional, default is {all, amd64, i386}
+  defcomponentrules
+    Default set of rules to automatically choose a component for a
+    package. See **componentrules** below for an explanation.
   indexcompressors
     A set of compression methods to use for compressing the indices.
     Possible values none, gz, bz2, xz. Default { gz, xz }
