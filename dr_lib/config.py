@@ -1,4 +1,10 @@
-import collections, fnmatch, importlib, logging, os, types, yaml
+import collections
+import fnmatch
+import importlib
+import logging
+import os
+import types
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +164,7 @@ class Config(types.SimpleNamespace):
 		if rules is None: return fallback
 		for rule in rules:
 			for pattern in rule['packages']:
-				if fnmatch(name, pattern): return rule['component']
+				if fnmatch.fnmatch(name, pattern): return rule['component']
 		return fallback
 
 class Release(types.SimpleNamespace):
