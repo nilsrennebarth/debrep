@@ -1,11 +1,16 @@
+--
+-- Hold binary packages metadata. Each package file in the repository will get
+-- exactly one id. If the same package is present in several releases, it will
+-- still have only one id, but several references (see below)
+--
 CREATE TABLE binpackages (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
-	udeb INTEGER,
-	control TEXT,
+	udeb INTEGER,         -- 1 if the package is a udeb, 0 otherwise
+	control TEXT,         -- Content of the binary package control file
 	Version TEXT,
 	Architecture TEXT,
-	Size INTEGER,
+	Size INTEGER,         -- Size of package file in bytes
 	MD5Sum TEXT,
 	SHA1 TEXT,
 	SHA256 TEXT,
@@ -16,8 +21,7 @@ CREATE INDEX bpname ON binpackages (name, Architecture);
 CREATE TABLE srcpackages (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
-	dsc TEXT,
-	Directory TEXT,
+	dsc TEXT,             -- Content of the dsc File
 	Priority TEXT,
 	Section TEXT
 );
@@ -29,10 +33,10 @@ CREATE TABLE releases (
 CREATE UNIQUE INDEX relcodename ON releases (Codename);
 
 CREATE TABLE release_bin (
-	idrel INTEGER,
-	idpkg INTEGER,
+	idrel INTEGER,        -- id of release (=> releases.id)
+	idpkg INTEGER,        -- id of package (=> binpackages.id)
 	component TEXT,
-	Filename TEXT,
+	Filename TEXT,        -- Package filename relative to repository root
 	PRIMARY KEY (idrel, idpkg)
 );
 CREATE INDEX rbpr ON release_bin (idpkg, idrel);
