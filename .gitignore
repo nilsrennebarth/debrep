@@ -1,5 +1,5 @@
 __pycache__
-config
-db
+/config
+/db
 design.html
 debrep.1

@@ -5,6 +5,7 @@ Debrep module implementing sqlite3 as db backend
 
 import collections
 import logging
+import os.path
 import sqlite3
 
 
@@ -86,62 +87,13 @@ class Db:
 
 	version = 1
 
-	_tables = [
-		"""CREATE TABLE binpackages (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT,
-		control TEXT,
-		Version TEXT,
-		Architecture TEXT,
-		udeb INTEGER,
-		Size INTEGER,
-		MD5Sum TEXT,
-		SHA1 TEXT,
-		SHA256 TEXT,
-		Description_md5 TEXT
-		)""",
-		"""CREATE INDEX bpname ON binpackages (name, Architecture)
-		""",
-		"""CREATE TABLE srcpackages (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT,
-		dsc TEXT,
-		Directory TEXT,
-		Priority TEXT,
-		Section TEXT
-		)
-		""",
-		"""CREATE TABLE releases (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		Codename TEXT
-		)""",
-		"""CREATE UNIQUE INDEX relcodename ON releases (Codename)""",
-		"""CREATE TABLE release_bin (
-		idrel INTEGER,
-		idpkg INTEGER,
-		component TEXT,
-		Filename TEXT,
-		PRIMARY KEY (idrel, idpkg)
-		)""",
-		"""CREATE INDEX rbpr ON release_bin (idpkg, idrel)
-		""",
-		"""CREATE TABLE release_src (
-		idrel INTEGER,
-		idsrc INTEGER,
-		component TEXT,
-		Directory TEXT,
-		PRIMARY KEY (idrel, idsrc)
-		)""",
-		"""CREATE TABLE dbschema (
-		version INTEGER
-		)"""
-	]
-
 	def mktables(self):
 		logger.info('Create new db')
-		for sql in Db._tables:
-			self.dbc.execute(sql)
-		self.dbc.execute('INSERT INTO dbschema VALUES (:v)', dict(v=Db.version))
+		file = "{dir}/sqlite-{ver:03d}.sql".format(
+			dir=os.path.dirname(__file__), ver=self.version
+		)
+		with open(file) as f:
+			self.dbc.executescript(f.read())
 		self.db.commit()
 
 	def syncreleases(self, releases):
