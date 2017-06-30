@@ -204,7 +204,7 @@ class Db:
 			"""SELECT p.id, r.idrel, rl. Codename, r.component, r.Filename,
 				p.name, p.Version, p.Architecture, p.SHA256
 			FROM binpackages p
-			JOIN release_bin rf ON p.id = r.idpkg
+			JOIN release_bin r ON p.id = r.idpkg
 			JOIN releases rl ON r.idrel = rl.id
 			WHERE p.id=?""", (pkgid,))
 		result = []
@@ -237,7 +237,7 @@ class Db:
 				result[0].name, result[0].id)
 			# Mark the ref as deleted for the caller
 			result[0].relid = None
-			self.dbc.ecexute("DELETE from binpackages WHERE id=?", (pkgid,))
+			self.dbc.execute("DELETE from binpackages WHERE id=?", (pkgid,))
 		return result
 
 	def relName(self, id):
@@ -344,7 +344,7 @@ class Db:
 			  + sqlj \
 			  + sqlw
 		self.dbc.execute(sql, sqlparams)
-		return self.dbc.fetchall()
+		return [row[0] for row in self.dbc.fetchall()]
 
 	def addBinaryRef(self, idrel, idpkg, component, filename):
 		self.dbc.execute(
