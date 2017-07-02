@@ -178,10 +178,10 @@ def doDel(args):
 	relids = relidsFromArgs(args.release, noneIsEmpty=False)
 	for pkgid in db.listIds(arch, component, relids, args.names):
 		for relid in relids:
-			refs = db.delBinary(pkgid, relid)
-			if len(refs) == 1 and refs[0].idrel is None:
-				store.binDelLastRef(refs[0].Filename)
+			refs = db.binDelRef(pkgid, relid)
+			store.binDelRef(refs)
 	updateReleases()
+
 
 def doList(args):
 	arch = arg2list(args.architecture)
@@ -190,6 +190,7 @@ def doList(args):
 	fmt = utils.decodeEscapes(args.format)
 	for p in db.listBin(arch, component, relids, args.names):
 		print(fmt.format_map(p),end='')
+
 
 def doMove(args):
 	print("Move not implemented", file=sys.stderr)

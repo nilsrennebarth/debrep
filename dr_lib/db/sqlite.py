@@ -212,14 +212,13 @@ class Db:
 			result.append(BinPkgRef(**dict(zip(row.keys(), row))))
 		return result
 
-	def delBinary(self, pkgid, relid):
+	def binDelRef(self, pkgid, relid):
 		"""
-		Delete binary package from a release
+		Delete a binary package from a release
 
-		Return a list of references that stil point to the package. If no such
-		references remain, return a reference to the package that just has been
-		deleted, with the release id 'relid' set to None, so the caller can
-		know it was deleted.
+		Return a list of references to the package. The first reference in the
+		list is the reference that just has been deleted. It will be marked with
+		the property deleted set to True.
 		"""
 		# Before deleting the references, get it, otherwise the Filename
 		# and component from the reference is lost. Also get all other refs
@@ -230,14 +229,33 @@ class Db:
 			"""DELETE FROM release_bin
 			WHERE idrel=? AND idpkg=?""", (relid, pkgid))
 		if len(result) == 0:
-			# Oops, no package with that id
+			# Only happens on concurrent access
 			logger.warning("While deleting package id %d: Not found", pkgid)
-		elif len(result) == 1:
-			logger.debug("Last reference to %s deleted. Remove %d",
-				result[0].name, result[0].id)
-			# Mark the ref as deleted for the caller
-			result[0].relid = None
-			self.dbc.execute("DELETE from binpackages WHERE id=?", (pkgid,))
+			return result
+		if len(result) == 1:
+			# That was the last reference to that package
+			# Safety check in case the ref has been deleted in the meantime
+			if result[0].id == pkgid and result[0].idrel == relid:
+				self.dbc.execute("DELETE from binpackages WHERE id=?", (pkgid,))
+				logger.debug("Last reference to %s deleted",
+					result[0].Filename)
+				result[0].deleted = True
+			else:
+				result[0].deleted = False
+			return result
+		# Search the deleted reference and move it to the front
+		for pos, x in enumerate(result):
+			if x.id == pkgid and x.idrel == relid:
+				x.deleted = True
+				logger.debug("Delete %s_%s from %s/%s", x.name, x.Version,
+					x.Codename, x.component)
+				break
+		if pos == 0:
+			return result
+		if 'deleted' in result[pos].__dict__:
+			result.insert(0, result.pop(pos))
+		else:
+			result[0].deleted = False
 		return result
 
 	def relName(self, id):

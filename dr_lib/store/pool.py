@@ -46,10 +46,10 @@ class Store:
 		)
 
 	def binDelRef(self, refs):
-		pass
-
-	def binDelLastRef(self, ref):
-		fname = os.path.join(self.root, ref.Filename)
+		# TODO remove empty directories
+		if len(refs) != 1: return
+		if not refs[0].deleted: return
+		fname = os.path.join(self.root, refs[0].Filename)
 		try:
 			os.remove(fname)
 		except FileNotFoundError:
