@@ -191,7 +191,6 @@ Table definition::
     Version TEXT,
     Architecture TEXT,
     udeb INT,
-    Filename TEXT,
     Size INT,
     MD5Sum TEXT,
     SHA1 TEXT,
@@ -215,15 +214,17 @@ because these are lists::
 
   CREATE TABLE release_pkg (
     idrel INT,
-    component TEXT,
     idpkg INT,
+    component TEXT,
+    Filename TEXT,
     PRIMARY KEY (idrel, idpkg)
   )
 
   CREATE TABLE release_src (
     idrel INT,
-    component TEXT,
     idsrc INT,
+    component TEXT,
+    Directory TEXT,
     PRIMARY KEY (idrel, idsrc)
   )
 
