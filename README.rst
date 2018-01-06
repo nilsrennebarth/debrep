@@ -3,14 +3,34 @@ debrep
 ======
 A tool to create and maintain signed debian package repositories.
 
-The software is currently in a pre-alpha stage. Adding (binary) packages
-works, with all options mentioned in the manpage.
-Files are generated/updated and Release files updated and signed.
-Listing packages works as well.
+The software is currently in the alpha stage and allows maintainting a
+(binary only) debian package repository. Packages can be added, listed and
+deleted. The only subcommand not yet
+implemented is moving packages from one distribution to another, which is
+only an optimization for deleting and adding the packages.
 
-Deletion, moving and source packages are not supported yet,
-Very few checks, in particular for the configuration are done.
+Still to be done:
 
+- Source packages
+- Move packages between distributions
+- More validity checks in particular for the options. Currently you get
+  strange and unexpected errors when options have the wrong structure or
+  type.
+- Different repository storage layouts:
+
+  - Store packages in distibution and component specific paths and use
+    either symlinks or hardlinks or copies for the same binary in several
+    distributions.
+
+- Various options how different versions of the same package in one
+  distribution are handled:
+
+  - Only allow one version of a package per arch/distribution, adding a
+    different one automatically replaces the previous one.
+  - Same as previous, but addtionally only allow strictly higher versions.
+  - Allow several versions of a package per distribution
+
+- Audit trail logging all changes to the repository.
 
 Features
 ========
