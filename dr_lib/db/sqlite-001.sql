@@ -32,6 +32,15 @@ CREATE TABLE releases (
 );
 CREATE UNIQUE INDEX relcodename ON releases (Codename);
 
+--
+-- Hold the binary packages of releases
+-- Each release contains a certain number of pacakges, and
+-- for each package there is a release specific component and file
+-- name (relative to the repository root). The file name of a package
+-- with a given id may or may differ between releases. For a package
+-- pool it will always be the same but we want to support various
+-- repository layouts.
+--
 CREATE TABLE release_bin (
 	idrel INTEGER,        -- id of release (=> releases.id)
 	idpkg INTEGER,        -- id of package (=> binpackages.id)

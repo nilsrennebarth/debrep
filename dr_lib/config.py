@@ -6,13 +6,9 @@ import os
 import types
 import yaml
 
-logger = logging.getLogger(__name__)
+from error import ConfigError
 
-class ConfigError(Exception):
-	def __init__(self,msg):
-		self._msg = msg
-	def __str__(self):
-		return self._msg
+logger = logging.getLogger(__name__)
 
 _top_options = {
 	'db': None,
@@ -61,7 +57,7 @@ def getConfig(args):
 		# merge in default values
 		for k, v in _top_options.items():
 			if not hasattr(cfg, k): setattr(cfg, k, v)
-		if cfg.dbtype == 'sqlite' and cfg.db == None:
+		if cfg.dbtype == 'sqlite' and cfg.db is None:
 			cfg.db = {'database':	os.path.join(cfg.root, 'db', 'repo.db')}
 
 	def set_release_defaults(rel):
@@ -69,11 +65,11 @@ def getConfig(args):
 		for k, v in _release_options.items():
 			if not hasattr(rel, k): setattr(rel, k, v)
 		# set yet unspecified values from top config
-		if rel.architectures == None:
+		if rel.architectures is None:
 			rel.architectures = top.defarchitectures
-		if rel.components == None:
+		if rel.components is None:
 			rel.components = top.defcomponents
-		if rel.gpgkey == None:
+		if rel.gpgkey is None:
 			rel.gpgkey = top.defgpgkey
 
 	def local_defaults(cfg):
@@ -90,8 +86,11 @@ def getConfig(args):
 
 	def set_releases(cfg):
 		releases = collections.OrderedDict()
+		no = 0
 		for r in cfg.releases:
 			release = Release(**(_del_unknowns(r, _release_options)))
+			release.no = no
+			no += 1
 			releases[release.name] = release
 			set_release_defaults(release)
 		# Replace the original array of dicts obtained from yaml
@@ -99,9 +98,9 @@ def getConfig(args):
 		cfg.releases = releases
 
 	config_dict = {}
-	if args.config != None:
+	if args.config is not None:
 		if not tryconf(args.config):
-			raise ConfigError('File not foud: %s ' % file)
+			raise ConfigError('File not found: %s ' % file)
 		set_specific_defaults = local_defaults
 	elif tryconf('./config'):
 		set_specific_defaults = local_defaults
@@ -116,7 +115,7 @@ def getConfig(args):
 	set_general_defaults(top)
 	set_releases(top)
 	# only now can we determine the default release if not already set
-	if top.defrelease == None:
+	if top.defrelease is None:
 		for release in top.releases.values():
 			if realease.readonly: continue
 			top.defrelease = release
@@ -145,7 +144,7 @@ class Config(types.SimpleNamespace):
 
 	def getStore(self):
 		if '_store' in self.__dict__: return self._store
-		if self.store not in ('pool'):
+		if self.store not in ('pool', 'symtree'):
 			raise ConfigError("Unknown store '{}'".format(self.store))
 		store = importlib.import_module('store.' + self.store)
 		self._store = store.Store(self, self.getDb())

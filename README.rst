@@ -12,7 +12,7 @@ only an optimization for deleting and adding the packages.
 Still to be done:
 
 - Source packages
-- Move packages between distributions
+- Move packages between distributions and/or components
 - More validity checks in particular for the options. Currently you get
   strange and unexpected errors when options have the wrong structure or
   type.

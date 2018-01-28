@@ -113,7 +113,7 @@ def _updateRelease(release, db, root):
 		for label in ('description', 'origin', 'label', 'version', 'suite'):
 			if not hasattr(release, label): continue
 			val = getattr(release, label)
-			if val != None:
+			if val is not None:
 				f.write(label.capitalize() + ': '+ val + '\n')
 		f.write('Codename: '+ release.name + '\n')
 		f.write('Architectures: ' + ' '.join(release.architectures) + '\n')
@@ -129,7 +129,7 @@ def _updateRelease(release, db, root):
 
 def _signRelease(release, root, key):
 	gpgargs = ['gpg', '--no-tty', '--batch' ]
-	if key != None:
+	if key is not None:
 		gpgargs += [ '--local-user', key ]
 	relfile = os.path.join(root, 'dists', release.name, 'Release')
 	inlfile = os.path.join(root, 'dists', release.name, 'InRelease')

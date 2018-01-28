@@ -10,25 +10,18 @@ Contains the classes
  - SrcPackage represent a source package
 
 """
-import hashlib, types
+import hashlib
+import os
+import types
+import utils
 
 from debian.debfile import DebFile
 from debian.deb822 import Deb822
 
-
 # Testing aid
 if __name__ == '__main__':
-	import os, sys
+	import sys
 	sys.path.append(os.path.dirname(__file__))
-
-import os
-import utils
-
-class PkgError(Exception):
-	def __init__(self,msg):
-		self._msg = msg
-	def __str__(self):
-		return self._msg
 
 
 class BinPackage (types.SimpleNamespace):
@@ -62,7 +55,7 @@ class BinPackage (types.SimpleNamespace):
 	def poolDir(self):
 		"""Directory containing the package in a debian package pool
 
-		These are just the last two directory components, i.e. the parth
+		These are just the last two directory components, i.e. the part
 		that is release and component independent.
 		"""
 		base = self.sourceName()
@@ -117,7 +110,30 @@ def getBinFromDb(db, pckid):
 	return BinPackageDb(**pdict)
 
 class BinPkgRef(types.SimpleNamespace):
-	pass
+	"""
+	A reference to a binary package
+
+	Holds the following data from a binary package reference:
+
+	- id: package id
+	- idrel: release id
+	- Codename: code name of release
+	- component: component the package is part of
+	- Filename: file name of package relative to repository root
+	- name: package name
+	- Version: package version
+	- Architecture: package architecture
+	- SHA256: sha256 checksum of package
+	"""
+
+	strformat = "{name}-{Version}({Architecture} in {Codename}/{Component}"
+	pkgformat = "{name}-{Version}/{Architecture}"
+
+	def __str__(self):
+		return BinPkgRef.strformat.format_map(self.__dict__)
+
+	def pkgname(self):
+		return BinPkgRef.strformat(format_map(self.__dict__)
 
 
 
@@ -128,7 +144,7 @@ if __name__ == '__main__':
 		fname = None
 	except ValueError:
 		pass
-	if (fname != None):
+	if (fname is not None):
 		print(getBinFromDeb(fname))
 	else:
 		import config

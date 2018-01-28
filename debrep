@@ -6,13 +6,7 @@ Maintain a repository of debian packages
 import argparse, locale, logging, sys
 
 from dr_lib import config, index, package, utils
-
-class ArgError(Exception):
-	def __init__(self,msg):
-		self._msg = msg
-	def __str__(self):
-		return self._msg
-
+from dr_lib.error import ArgError
 
 def addBinary(pkg, db, store, component, release):
 

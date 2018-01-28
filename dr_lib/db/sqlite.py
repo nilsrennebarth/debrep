@@ -14,12 +14,6 @@ from package import BinPkgRef
 
 logger = logging.getLogger(__name__)
 
-class DbError(Exception):
-	def __init__(self,msg):
-		self._msg = msg
-	def __str__(self):
-		return self._msg
-
 #
 # Query utility functions
 #
@@ -134,7 +128,7 @@ class Db:
 		# query sqlite if table 'dbschema' exists
 		self.dbc.execute("SELECT name FROM sqlite_master "
 			"WHERE type='table' AND name='dbschema'")
-		if self.dbc.fetchone() == None:
+		if self.dbc.fetchone() is None:
 			# No, table does not exist. Assume db is empty
 			self.mktables()
 			return
@@ -201,7 +195,7 @@ class Db:
 		Get all references to a binary package
 		"""
 		self.dbc.execute(
-			"""SELECT p.id, r.idrel, rl. Codename, r.component, r.Filename,
+			"""SELECT p.id, r.idrel, rl.Codename, r.component, r.Filename,
 				p.name, p.Version, p.Architecture, p.SHA256
 			FROM binpackages p
 			JOIN release_bin r ON p.id = r.idpkg
@@ -218,7 +212,7 @@ class Db:
 
 		Return a list of references to the package. The first reference in the
 		list is the reference that just has been deleted. It will be marked with
-		the property deleted set to True.
+		the property 'deleted' set to True.
 		"""
 		# Before deleting the references, get it, otherwise the Filename
 		# and component from the reference is lost. Also get all other refs
