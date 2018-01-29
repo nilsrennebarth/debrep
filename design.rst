@@ -278,7 +278,7 @@ Toplevel is a Mapping with keys
   dbtype
     One of sqlite or mysql. Optionsal, default is sqlite
   layout
-    One of pool or bydist. Optional, default is pool
+    One of pool or symtree. Optional, default is pool
   defgpgkey
     default GPG key to sign the releases with.
     Optional, if omitted, defaults to the user's first secret key.
