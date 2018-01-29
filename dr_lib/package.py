@@ -133,7 +133,7 @@ class BinPkgRef(types.SimpleNamespace):
 		return BinPkgRef.strformat.format_map(self.__dict__)
 
 	def pkgname(self):
-		return BinPkgRef.strformat(format_map(self.__dict__)
+		return BinPkgRef.strformat.format_map(self.__dict__)
 
 
 
