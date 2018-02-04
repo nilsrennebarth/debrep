@@ -5,7 +5,12 @@ If the same package appears in sevaral distributions, symlinks
 point to the file in the 'oldest' release, where older is determined
 by the order of releases in the config file.
 """
-import logging, os, os.path, shutil
+import logging
+import os
+import os.path
+import shutil
+
+from error import StoreError
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +34,7 @@ class Store:
 
 	def __init__(self, config, db):
 		self.root = config.root
-		self.db = config.db
+		self.db = config.getDb()
 		self.releases = config.releases
 
 	@staticmethod
@@ -49,10 +54,10 @@ class Store:
 		Side effect: Add property 'Filename' to pkg, containing the
 		package's path name relative to the repository root
 		"""
-		reldir  = pkgDir(pkg, component, release)
+		reldir  = Store.pkgDir(pkg, component, release)
 		# create directory
 		os.makedirs(os.path.join(self.root, reldir), exist_ok=True)
-		pkg.Filename = os.path.join(reldir, pkgFilename(pkg))
+		pkg.Filename = os.path.join(reldir, Store.pkgFilename(pkg))
 
 	def binNewPkg(self, pkg, component, release):
 		"""Add a new binary package to the store
@@ -73,7 +78,7 @@ class Store:
 		slist = Symreflist(self.releases, self.root)
 		slist.setRefs(self.db.binGetRefs(pkg.id))
 		slist.addRef(pkg, component, release)
-		return relname
+		return pkg.Filename
 
 	def binDelRef(self, refs):
 		"""Remove a reference to a package"""
@@ -128,27 +133,28 @@ class Symreflist:
 			raise StoreError('No references found' % pkg)
 		for ref in refs:
 			ref.abspath = os.path.join(self.root, ref.Filename)
-			if os.islink(ref.abspath):
+			if os.path.islink(ref.abspath):
 				# ref is symlink
-				res.islink = True
+				ref.islink = True
 			else:
 				# ref is real file
 				if self.primaryRef is not None:
 					# Only one ref must be a real file
 					raise StoreError('Ref %s is real, symlink expected' % ref)
 				self.primaryRef = ref
-			self.refs.append(s)
+			self.refs.append(ref)
 		if self.primaryRef is None:
 			# At least one ref must be a real file
 			raise StoreError('All refs of package %s are symlinks'
 				% refs[0].pkgname())
 
 
-	def addRef(self, pkg):
+	def addRef(self, pkg, component, release):
 		"""Add reference to given package"""
 		pkg.abspath = os.path.join(self.root, pkg.Filename)
+		refs = self.refs
 		# sort list in release order
-		self.refs.sort(key=lambda ref: self.relno(ref.Codename))
+		refs.sort(key=lambda ref: self.relno(ref.Codename))
 		# Get index where new reference needs to be inserted
 		for refpos in range(len(refs)+1):
 			if refpos == len(refs): break
@@ -159,7 +165,7 @@ class Symreflist:
 		if refpos > 0:
 			pkg.islink = True
 			# New ref is not in first release, i.e. becomes a symlink
-			if self.primaryRef is self.refs[0]:
+			if self.primaryRef is refs[0]:
 				# Primary ref is the right already, so create the right
 				# symlink and we are done
 				self.getPrimaryTarget()
@@ -167,10 +173,10 @@ class Symreflist:
 				return
 			# Primary ref not the right one, move it
 			logger.warning('Moving real file of %s to %s/%s',
-				pkg.pkgname(), self.refs[0].Codename, self.refs[0].component)
-			self.refs.append(pkg)
+				pkg.pkgname(), refs[0].Codename, refs[0].component)
+			refs.append(pkg)
 		else:
-			self.refs.insert(0, pkg)
+			refs.insert(0, pkg)
 		self.movePrimary(0)
 
 	def delRef(self):
