@@ -126,14 +126,14 @@ class BinPkgRef(types.SimpleNamespace):
 	- SHA256: sha256 checksum of package
 	"""
 
-	strformat = "{name}-{Version}({Architecture} in {Codename}/{Component}"
+	strformat = "{name}-{Version}({Architecture}) in {Codename}/{component}"
 	pkgformat = "{name}-{Version}/{Architecture}"
 
 	def __str__(self):
 		return BinPkgRef.strformat.format_map(self.__dict__)
 
 	def pkgname(self):
-		return BinPkgRef.strformat.format_map(self.__dict__)
+		return BinPkgRef.pkgformat.format_map(self.__dict__)
 
 
 
