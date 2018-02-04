@@ -37,8 +37,10 @@ _release_options = {
 }
 
 def _del_unknowns(orig, proto):
-	for k in orig.keys():
-		if k not in proto: del orig[k]
+	for k in [x for x in orig.keys()]:
+		if k not in proto:
+			logger.warning('Unknown key "%s" in config, ignored' % k)
+			del orig[k]
 	return orig
 
 def getConfig(args):
@@ -102,7 +104,7 @@ def getConfig(args):
 		if not tryconf(args.config):
 			raise ConfigError('File not found: %s ' % file)
 		set_specific_defaults = local_defaults
-	elif tryconf('./config'):
+	elif tryconf('.'):
 		set_specific_defaults = local_defaults
 	elif tryconf(os.path.expanduser('~/.config')):
 		set_specific_defaults = user_defaults
