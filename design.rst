@@ -277,7 +277,7 @@ Toplevel is a Mapping with keys
     database defaults to `root`/``db/repo.db``
   dbtype
     One of sqlite or mysql. Optionsal, default is sqlite
-  layout
+  store
     One of pool or symtree. Optional, default is pool
   defgpgkey
     default GPG key to sign the releases with.
@@ -334,8 +334,7 @@ A release is a mapping with keys
 
 The config file is named ``debrep.conf`` and is searched (in this order)
 
-- location specific: in subdirectory ``config`` of the current working
-  directory.
+- location specific: in the current working directory.
 - user specific: in ``~/.config``
 - global: in ``/etc/debrep/debrep.conf``
 
