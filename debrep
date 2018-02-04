@@ -33,6 +33,7 @@ def addBinary(pkg, db, store, component, release):
 			return
 		logger.info("Package '%s' with given content already in repo. Reusing",
 			pkg.name)
+		pkg.id = id
 		filename = store.binAddRef(pkg, component, release.name)
 		db.addBinaryRef(release.id, refs[0].id, component, filename)
 		index.cacheDirty(release.name, component, pkg.Architecture)
