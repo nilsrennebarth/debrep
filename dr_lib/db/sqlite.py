@@ -5,6 +5,7 @@ Debrep module implementing sqlite3 as db backend
 
 import collections
 import logging
+import os
 import os.path
 import sqlite3
 
@@ -137,6 +138,9 @@ class Db:
 		logger.debug('Opened db version %d', dbv)
 
 	def __init__(self, config):
+		dbfile = config.db['database']
+		if not os.path.exists(dbfile):
+			os.makedirs(os.path.dirname(dbfile), exist_ok=True)
 		self.db = sqlite3.connect(**config.db)
 		self.db.row_factory = sqlite3.Row
 		self.dbc = self.db.cursor()
@@ -204,6 +208,8 @@ class Db:
 		result = []
 		for row in self.dbc.fetchall():
 			result.append(BinPkgRef(**dict(zip(row.keys(), row))))
+		logger.debug("binGetRefs: refs for %d: \n- %s" % (pkgid,
+			"\n- ".join([str(x) for x in result])))
 		return result
 
 	def binDelRef(self, pkgid, relid):
