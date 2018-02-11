@@ -13,15 +13,11 @@ Still to be done:
 
 - Source packages
 - Move packages between distributions and/or components
+- Readonly releases
+- Fill new release with references from an existing release
 - More validity checks in particular for the options. Currently you get
   strange and unexpected errors when options have the wrong structure or
   type.
-- Different repository storage layouts:
-
-  - Store packages in distibution and component specific paths and use
-    either symlinks or hardlinks or copies for the same binary in several
-    distributions.
-
 - Various options how different versions of the same package in one
   distribution are handled:
 

@@ -78,27 +78,13 @@ Existing software
 
 TODO
 ----
+These are minor items of a more internal nature, not new features
+as described in the README.
+
 - when adding, check if given component exists in release, and if a
   package is to be replaced, check that the component is the same,
   or allow a --force-replace-component or similar
 - check architecture
-- delete packages
-- readonly releases
-- copy release
-- Move between components
-- allow wildcards for del and move
-- source Packages
-- Store Filename key in references to allow a different filename, based on
-  release and component:
-  - Store.addBinaryRef -> binAddRef, delBinaryRef
-- Implement symlink and hardlink stores with a release based root directory.
-- new db and store implementations:
-
-  - check the used abstractions, tweak them a bit, use a base class to
-    provide helpers or high-level actions sharing some code across different
-    implementation.
-  - a release store, hardlink based
-  - a mysql database backend
 
 
 Usage

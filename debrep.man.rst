@@ -83,7 +83,7 @@ one if they differ.
 Delete packages
 ---------------
 Packages are removed with the *rm* or (synonymously) *del* subcommand.
-It is followed by one or more package names.
+It is followed by one or more package names or patterns.
 
 List packages
 -------------
