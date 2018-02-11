@@ -52,15 +52,6 @@ class BinPackage (types.SimpleNamespace):
 		else:
 			return self.name
 
-	def poolDir(self):
-		"""Directory containing the package in a debian package pool
-
-		These are just the last two directory components, i.e. the part
-		that is release and component independent.
-		"""
-		base = self.sourceName()
-		prefixlen = 4 if base.startswith('lib') else 1
-		return os.path.join(base[0:prefixlen], base)
 
 
 class BinPackageDeb(BinPackage):

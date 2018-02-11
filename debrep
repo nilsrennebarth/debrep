@@ -34,8 +34,8 @@ def addBinary(pkg, db, store, component, release):
 		logger.info("Package '%s' with given content already in repo. Reusing",
 			pkg.name)
 		pkg.id = id
-		filename = store.binAddRef(pkg, component, release.name)
-		db.addBinaryRef(release.id, refs[0].id, component, filename)
+		store.binAddRef(pkg, component, release.name)
+		db.addBinaryRef(release.id, refs[0].id, component, pkg.Filename)
 		index.cacheDirty(release.name, component, pkg.Architecture)
 		return
 	isNewPkg = True
@@ -68,14 +68,14 @@ def addBinary(pkg, db, store, component, release):
 			pkg.id = refs[0].id
 			isNewPkg = False
 	# Now do an add or replace, depending on pkg.id
-	filename = store.binNewPkg(pkg, component, release.name)
+	store.binNewPkg(pkg, component, release.name)
 	if isNewPkg:
 		db.newBinary(pkg)
-		db.addBinaryRef(release.id, pkg.id, component, filename)
+		db.addBinaryRef(release.id, pkg.id, component, pkg.Filename)
 		logger.info("Added package %s_%s to %s/%s with new id %d",
 			pkg.name, pkg.Version, release.name, component, pkg.id)
 	else:
-		db.replaceBinary(pkg, release.id, component, filename)
+		db.replaceBinary(pkg, release.id, component, pkg.filename)
 		logger.info("Added package %s_%s to %s/%s under id %d",
 				pkg.name, pkg.Version, release.name, component, pkg.id)
 	index.cacheDirty(release.name, component, pkg.Architecture)

@@ -10,14 +10,10 @@ import os
 import os.path
 import shutil
 
+from basestore import BaseStore
 from error import StoreError
 
 logger = logging.getLogger(__name__)
-
-def pure_version(v):
-	"""Version without the epoch"""
-	(epoch, sep, version) = v.partition(':')
-	return v if sep == '' else version
 
 def relname2symtarget(fname):
 	"""Compute symlink target from package's relative name
@@ -30,55 +26,26 @@ def relname2symtarget(fname):
 	return os.path.join('..', '..', fname[len('dists/'):])
 
 
-class Store:
+class Store(BaseStore):
 
-	def __init__(self, config, db):
-		self.root = config.root
+	def __init__(self, config):
+		super().__init__(config)
 		self.db = config.getDb()
 		self.releases = config.releases
 
-	@staticmethod
-	def pkgFilename(pkg):
-		"""Filename for the package"""
-		return pkg.name + '_' + pure_version(pkg.Version) + '_' \
-			+ pkg.Architecture + '.deb'
-
-	@staticmethod
-	def pkgDir(pkg, component, release):
+	def pkgDir(self, pkg, component, release):
 		"""Directory for the package, relative to the repository root"""
 		return os.path.join('dists', release, component)
-
-	def prepDir(self, pkg, component, release):
-		"""Make sure directory to hold package exists
-
-		Side effect: Add property 'Filename' to pkg, containing the
-		package's path name relative to the repository root
-		"""
-		reldir  = Store.pkgDir(pkg, component, release)
-		# create directory
-		os.makedirs(os.path.join(self.root, reldir), exist_ok=True)
-		pkg.Filename = os.path.join(reldir, Store.pkgFilename(pkg))
-
-	def binNewPkg(self, pkg, component, release):
-		"""Add a new binary package to the store
-
-		Return the new filename
-		"""
-		self.prepDir(pkg, component, release)
-		# copy file
-		shutil.copy(pkg.origfile, os.path.join(self.root, pkg.Filename))
-		return pkg.Filename
 
 	def binAddRef(self, pkg, component, release):
 		"""Add a new reference to a package
 
 		Return the new filename
 		"""
-		self.prepDir(pkg, component, release)
+		self.binPrepareAdd(pkg, component, release)
 		slist = Symreflist(self.releases, self.root)
 		slist.setRefs(self.db.binGetRefs(pkg.id))
 		slist.addRef(pkg, component, release)
-		return pkg.Filename
 
 	def binDelRef(self, refs):
 		"""Remove a reference to a package"""

@@ -149,7 +149,7 @@ class Config(types.SimpleNamespace):
 		if self.store not in ('pool', 'symtree'):
 			raise ConfigError("Unknown store '{}'".format(self.store))
 		store = importlib.import_module('store.' + self.store)
-		self._store = store.Store(self, self.getDb())
+		self._store = store.Store(self)
 		return self._store
 
 	def getPkgComponent(self, name, release):
