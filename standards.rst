@@ -54,6 +54,16 @@ fields only:
 - Description-$LANG
 
 
+Sources
+~~~~~~~
+Sources are mostly like an additional architecture, i.e. there is an index per
+release and component.
+
+A source is stored in the repository as a Debian source control file
+(``.dsc``) and the file referenced in it by the Files multiline field. All
+files will be stored in the same directory. The fields of the .dsc file will
+appear in the packages file and must thus be stored in the database.
+
 Code Snippets
 -------------
 
