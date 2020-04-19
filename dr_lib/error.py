@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Debreb error classes
+Debrep error classes
 """
 
 class DebrepError(Exception):
