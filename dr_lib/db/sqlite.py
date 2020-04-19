@@ -56,10 +56,10 @@ def makeQuery(arch, component, idrel, name):
 	"""
 	Create a query from a standard set of properties
 
-	Given a list of architectures, components, realease ids
+	Given a list of architectures, components, release ids
 	and name globs, create query fragments and a parameter
 	list. An empty list as usual means no restrictions on the
-	given prperty.
+	given property.
 
 	Return a tuple with the join fragment, the where fragment
 	and the query parameters
