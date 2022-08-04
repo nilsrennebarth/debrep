@@ -5,15 +5,15 @@ A tool to create and maintain signed debian package repositories.
 
 The software is currently in the alpha stage and allows maintainting a
 (binary only) debian package repository. Packages can be added, listed and
-deleted. The only subcommand not yet
-implemented is moving packages from one distribution to another, which is
-only an optimization for deleting and adding the packages.
+deleted. The only subcommand not yet implemented is moving packages from one
+distribution to another, which is only an optimization for deleting and adding
+the packages.
 
 Still to be done:
 
 - Source packages
 - Move packages between distributions and/or components
-- Readonly releases
+- Mark releases as Readonly
 - Fill new release with references from an existing release
 - More validity checks in particular for the options. Currently you get
   strange and unexpected errors when options have the wrong structure or
